@@ -4,16 +4,16 @@ A specialized Python library for decrypting LTSpice encrypted model files (`.CIR
 
 ## Installation
 
-Using [uv](https://docs.astral.sh/uv/):
+Install as a tool with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv tool install git+https://github.com/jtsylve/spice-crypt.git
+```
+
+Or add as a dependency to an existing project:
 
 ```bash
 uv add git+https://github.com/jtsylve/spice-crypt.git
-```
-
-Or with pip:
-
-```bash
-pip install git+https://github.com/jtsylve/spice-crypt.git
 ```
 
 ## Requirements
