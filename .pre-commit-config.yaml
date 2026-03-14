@@ -1,5 +1,6 @@
-# SPDX-FileCopyrightText: © 2025 Bayou Bits Technologies, LLC
-# SPDX-License-Identifier: LicenseRef-Proprietary
+# SPDX-FileCopyrightText: © 2025-2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -18,3 +19,8 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v6.2.0
+    hooks:
+      - id: reuse

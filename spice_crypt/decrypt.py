@@ -1,14 +1,6 @@
-# SPDX-FileCopyrightText: © 2025 Bayou Bits Technologies, LLC
-# SPDX-FileCopyrightText: © 2025 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
-# SPDX-License-Identifier: LicenseRef-Proprietary
+# SPDX-FileCopyrightText: © 2025-2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
 #
-# This source code is proprietary and confidential.  It is provided under the
-# terms of a written license agreement between BAYOU BITS TECHNOLOGIES, LLC
-# and the recipient.  Any unauthorized use, copying, modification, or
-# distribution is strictly prohibited.
-#
-# Authorized representatives of the licensed recipient may request a copy of
-# the written license agreement via email at joe.sylve@gmail.com.
+# SPDX-License-Identifier: AGPL-3.0-or-later
 
 import binascii
 import contextlib

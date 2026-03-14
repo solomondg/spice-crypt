@@ -4,16 +4,16 @@ A specialized Python library for decrypting LTSpice encrypted model files (`.CIR
 
 ## Installation
 
+Using [uv](https://docs.astral.sh/uv/):
+
 ```bash
-pip install spice-crypt
+uv add git+https://github.com/jtsylve/spice-crypt.git
 ```
 
-Or install from source:
+Or with pip:
 
 ```bash
-git clone https://github.com/bayou-bits/spice-crypt.git
-cd spice-crypt
-pip install -e .
+pip install git+https://github.com/jtsylve/spice-crypt.git
 ```
 
 ## Requirements
@@ -26,7 +26,10 @@ pip install -e .
 SpiceCrypt provides a `spice-decrypt` command for decrypting LTSpice encrypted files:
 
 ```bash
-# Decrypt to stdout
+# Run directly without installing
+uvx --from git+https://github.com/jtsylve/spice-crypt.git spice-decrypt path/to/encrypted_file.CIR
+
+# Or after installation, decrypt to stdout
 spice-decrypt path/to/encrypted_file.CIR
 
 # Decrypt to a file
@@ -114,6 +117,6 @@ The first 128 eight-byte blocks (1024 bytes) form the crypto table. All subseque
 
 ## License
 
-This source code is proprietary and confidential. It is provided under the terms of a written license agreement between BAYOU BITS TECHNOLOGIES, LLC and the recipient. Any unauthorized use, copying, modification, or distribution is strictly prohibited.
+This project is licensed under the [GNU Affero General Public License v3.0 or later](LICENSES/AGPL-3.0-or-later.txt).
 
-Contact joe.sylve@gmail.com for licensing information.
+Copyright (c) 2025-2026 Joe T. Sylve, Ph.D.

@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText: © 2025 Bayou Bits Technologies, LLC
-# SPDX-FileCopyrightText: © 2025 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
-# SPDX-License-Identifier: LicenseRef-Proprietary
+# SPDX-FileCopyrightText: © 2025-2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
 
 [project]
 name = "spice-crypt"
@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "A library for decrypting LTSpice encrypted files"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "LicenseRef-Proprietary" }
+license = "AGPL-3.0-or-later"
 authors = [
     { name = "Joe T. Sylve, Ph.D.", email = "joe.sylve@gmail.com" },
 ]
