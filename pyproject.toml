@@ -5,7 +5,7 @@
 [project]
 name = "spice-crypt"
 version = "1.0.0"
-description = "A library for decrypting LTSpice encrypted files"
+description = "A library for decrypting LTspice® encrypted files"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"

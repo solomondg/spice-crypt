@@ -84,7 +84,7 @@ def _build_sbox_direct_lut(sbox_table, bit_transform):
     return tables
 
 
-class LTSpiceDES:
+class LTspiceDES:
     """
     LTSPice-DES Variant Implementation
 
@@ -252,7 +252,7 @@ class LTSpiceDES:
     _SBOX_DIRECT = _build_sbox_direct_lut(DES_SBOX_TABLE, DES_BIT_TRANSFORM)
 
     def __init__(self):
-        """Initialize the LTSpiceDES cipher."""
+        """Initialize the LTspiceDES cipher."""
         self.subkeys = None
         self.initialized_key = None
 
@@ -368,6 +368,6 @@ class LTSpiceDES:
         # The halves are combined with left in the upper 32 bits and right
         # in the lower 32 bits (note: no swap after the last round, matching
         # standard DES).  Only the low 32-bit dword of the result is
-        # returned, as the LTSpice variant discards the high bits.
+        # returned, as the LTspice variant discards the high bits.
         combined = (left_half << 32) | right_half
         return _apply_permutation(combined, self._FINAL_PERM_LUT) & 0xFFFFFFFF

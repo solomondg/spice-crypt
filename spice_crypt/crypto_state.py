@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-from spice_crypt.des import LTSpiceDES
+from spice_crypt.des import LTspiceDES
 
 # Masks for wrapping arithmetic to fixed-width unsigned integers
 _MASK32 = 0xFFFFFFFF
@@ -15,7 +15,7 @@ class CryptoState:
             raise ValueError("crypto table must be exactly 1024 bytes")
 
         self.crypto_table = table
-        self.DES = LTSpiceDES()
+        self.DES = LTspiceDES()
         self.reset()
 
     def reset(self):

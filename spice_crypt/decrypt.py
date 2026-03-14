@@ -15,8 +15,8 @@ from spice_crypt.crypto_state import CryptoState
 _END_CHECKSUM_RE = re.compile(r"\*\s*End\s+(\d+)\s+(\d+)", re.IGNORECASE)
 
 
-class LTSpiceFileParser:
-    """Parser for LTSpice encrypted files with efficient streaming support."""
+class LTspiceFileParser:
+    """Parser for LTspice® encrypted files with efficient streaming support."""
 
     def __init__(self, file_obj, raw_mode=False):
         """
@@ -75,7 +75,7 @@ class LTSpiceFileParser:
                 self._extract_checksums(line)
                 break
 
-            # Skip comments in LTSpice format
+            # Skip comments in LTspice format
             if not self.raw_mode and line.startswith("*"):
                 continue
 
@@ -154,10 +154,10 @@ class LTSpiceFileParser:
 
 def _detect_ltspice_format(file_obj) -> bool:
     """
-    Auto-detect whether a seekable file object contains LTSpice-format data.
+    Auto-detect whether a seekable file object contains LTspice-format data.
 
     Reads the first line, checks for known markers, then resets the stream
-    position.  Returns True if the file appears to be in LTSpice format.
+    position.  Returns True if the file appears to be in LTspice format.
     """
     first_line = file_obj.readline()
     file_obj.seek(0)
@@ -173,7 +173,7 @@ def decrypt_stream(
     Args:
         input_file: File object or path to read from
         output_file: File object or path to write to (if None, returns result as string)
-        is_ltspice_file: Boolean indicating if file is in LTSpice format
+        is_ltspice_file: Boolean indicating if file is in LTspice format
                          If None, auto-detect based on content
 
     Returns:
@@ -186,12 +186,12 @@ def decrypt_stream(
         if isinstance(input_file, str | os.PathLike):
             input_file = stack.enter_context(open(input_file))
 
-        # Auto-detect if file is in LTSpice format if not specified
+        # Auto-detect if file is in LTspice format if not specified
         if is_ltspice_file is None:
             is_ltspice_file = _detect_ltspice_format(input_file)
 
         # Create parser
-        parser = LTSpiceFileParser(input_file, raw_mode=not is_ltspice_file)
+        parser = LTspiceFileParser(input_file, raw_mode=not is_ltspice_file)
 
         # Initialize output handling
         return_string = output_file is None
@@ -222,8 +222,8 @@ def decrypt(data, is_ltspice_file=None):
     Decrypts encrypted data.
 
     Args:
-        data: String containing encrypted data, either raw hex or LTSpice file format
-        is_ltspice_file: Boolean indicating if the data is in LTSpice file format.
+        data: String containing encrypted data, either raw hex or LTspice file format
+        is_ltspice_file: Boolean indicating if the data is in LTspice file format.
                          If None, auto-detect based on content.
 
     Returns:

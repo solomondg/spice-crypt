@@ -19,11 +19,11 @@ from spice_crypt.decrypt import decrypt_stream
 def main():
     """Main entry point for the CLI"""
     parser = argparse.ArgumentParser(
-        description="SpiceCrypt - A tool for decrypting LTSpice encrypted files"
+        description="SpiceCrypt - A tool for decrypting LTspice® encrypted files"
     )
     parser.add_argument(
         "input_file",
-        help="Path to the encrypted file to decrypt (LTSpice .CIR/.SUB format or raw hex)",
+        help="Path to the encrypted file to decrypt (LTspice .CIR/.SUB format or raw hex)",
     )
     parser.add_argument("-o", "--output", help="Output file path (default: print to stdout)")
     parser.add_argument(
@@ -33,7 +33,7 @@ def main():
         "-r",
         "--raw",
         action="store_true",
-        help="Treat input as raw hex data instead of LTSpice format",
+        help="Treat input as raw hex data instead of LTspice® format",
     )
     parser.add_argument("-v", "--version", action="version", version=f"SpiceCrypt {__version__}")
     parser.add_argument("--verbose", action="store_true", help="Display additional information")
@@ -52,7 +52,7 @@ def main():
         if args.verbose:
             input_path = Path(args.input_file)
             if input_path.suffix.lower() in (".cir", ".sub") and not args.raw:
-                print(f"Processing LTSpice file: {args.input_file}", file=sys.stderr)
+                print(f"Processing LTspice file: {args.input_file}", file=sys.stderr)
             elif args.raw:
                 print(f"Processing as raw hex data: {args.input_file}", file=sys.stderr)
 

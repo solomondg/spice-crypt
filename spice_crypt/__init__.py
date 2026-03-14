@@ -3,13 +3,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 """
-SpiceCrypt - A library for decrypting LTSpice encrypted files
+SpiceCrypt - A library for decrypting LTspice® encrypted files
 """
 
 __version__ = "1.0.0"
 
 from spice_crypt.crypto_state import CryptoState
-from spice_crypt.decrypt import LTSpiceFileParser, decrypt, decrypt_stream
-from spice_crypt.des import LTSpiceDES
+from spice_crypt.decrypt import LTspiceFileParser, decrypt, decrypt_stream
+from spice_crypt.des import LTspiceDES
 
-__all__ = ["CryptoState", "LTSpiceDES", "LTSpiceFileParser", "decrypt", "decrypt_stream"]
+__all__ = ["CryptoState", "LTspiceDES", "LTspiceFileParser", "decrypt", "decrypt_stream"]
