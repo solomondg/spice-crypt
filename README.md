@@ -1,6 +1,6 @@
 # SpiceCrypt
 
-A specialized Python library for decrypting LTspice® encrypted model files (`.CIR` / `.SUB` formats). It implements a variant of the DES encryption algorithm with custom modifications used by LTspice for protecting proprietary circuit models.
+A specialized Python library for decrypting LTspice® encrypted model files. It supports both the text-based format (`.CIR` / `.SUB` files using a modified DES variant) and the Binary File format (a two-layer XOR stream cipher), with automatic format detection.
 
 ## Installation
 
@@ -72,12 +72,12 @@ print(plaintext)
 
 ### `decrypt_stream(input_file, output_file=None, is_ltspice_file=None)`
 
-Stream-decrypt from a file path or file object. Memory-efficient for large files.
+Stream-decrypt from a file path or file object. Supports both the text-based hex/DES format and the Binary File format. When called with a file path, the format is auto-detected: files beginning with the Binary File signature are handled accordingly; otherwise the text-based LTspice format is assumed.
 
 ```python
 from spice_crypt import decrypt_stream
 
-# Decrypt file to file
+# Decrypt file to file (format auto-detected)
 _, verification = decrypt_stream("encrypted.CIR", "decrypted.cir")
 
 # Decrypt file to string
@@ -91,13 +91,17 @@ with open("encrypted.CIR") as infile:
 **Parameters:**
 - `input_file`: File path (str/PathLike) or text-mode file object.
 - `output_file` (optional): File path (str) or binary-mode file object. If `None`, returns decrypted content as a string.
-- `is_ltspice_file` (bool, optional): Whether the input is in LTspice format. Auto-detected if `None`.
+- `is_ltspice_file` (bool, optional): Whether the input is in LTspice text format. Auto-detected if `None`.
 
-**Returns:** `(content, (v1, v2))`: `content` is the decrypted string if no output file was given, otherwise `None`. `(v1, v2)` are CRC-based verification values that should match the checksums in the file's `End` line.
+**Returns:** `(content, (v1, v2))`: `content` is the decrypted string if no output file was given, otherwise `None`. `(v1, v2)` are verification values -- for the text-based format these are CRC-based checksums that should match the values on the file's `End` line; for the Binary File format they are a CRC-32 and rotate-left hash of the decrypted content.
 
-## File Format
+## File Formats
 
-SpiceCrypt supports standard LTspice encrypted files which have this structure:
+SpiceCrypt supports two LTspice encryption formats, both auto-detected when decrypting:
+
+### Text-Based DES Format
+
+Encrypted files in this format contain hex-encoded ciphertext wrapped in comment headers:
 
 ```
 * LTspice Encrypted File
@@ -121,6 +125,10 @@ SpiceCrypt supports standard LTspice encrypted files which have this structure:
 
 The first 128 eight-byte blocks (1024 bytes) form the crypto table. All subsequent blocks are ciphertext. The two integers on the `End` line are CRC-based checksums used to verify decryption integrity.
 
+### Binary File Format
+
+Encrypted files in this format are binary files identified by a 20-byte signature (`\r\n<Binary File>\r\n\r\n\x1a`). They use a two-layer XOR stream cipher unrelated to the DES-based scheme. The file header contains two 32-bit keys used to derive a substitution table index and step value for decryption.
+
 ## Specification
 
 For a detailed technical description of the encryption scheme -- including the full key derivation process, pre-DES stream cipher layer, all deviations from standard DES, and the integrity verification mechanism: see [SPECIFICATION.md](SPECIFICATION.md).
@@ -133,6 +141,11 @@ This type of reverse engineering for interoperability is specifically permitted 
 
 - **United States**: [17 U.S.C. § 1201(f)](https://www.law.cornell.edu/uscode/text/17/1201) permits circumvention of technological protection measures for the sole purpose of achieving interoperability between independently created programs. Section 1201(f)(2) explicitly allows distributing the tools developed for this purpose to others seeking interoperability. Additionally, [§ 1201(g)](https://www.law.cornell.edu/uscode/text/17/1201) permits circumvention when conducted in good-faith encryption research — studying the flaws and vulnerabilities of encryption technologies — and allows dissemination of the research findings.
 - **European Union**: [Article 6 of the Software Directive (2009/24/EC)](https://eur-lex.europa.eu/eli/dir/2009/24/oj) permits decompilation and reverse engineering when it is indispensable to achieve interoperability with independently created programs. Article 6(3) provides that this right cannot be overridden by contract.
+
+## Research Contributors
+
+- **Joe T. Sylve, Ph.D.** -- Reverse engineering and documentation of the text-based DES encryption format.
+- **Lucas Gerads** -- Reverse engineering and documentation of the Binary File encryption format.
 
 ## Trademarks
 

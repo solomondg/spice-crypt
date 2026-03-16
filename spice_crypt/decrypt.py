@@ -10,6 +10,7 @@ import re
 import warnings
 from collections.abc import Generator
 
+from spice_crypt.binary_file import BinaryFileParser
 from spice_crypt.crypto_state import CryptoState
 
 _END_CHECKSUM_RE = re.compile(r"\*\s*End\s+(\d+)\s+(\d+)", re.IGNORECASE)
@@ -66,6 +67,7 @@ class LTspiceFileParser:
     def _process_hex_chunks(self):
         """Process hex data in chunks and yield 8-byte blocks to decrypt."""
         hex_data = []
+        pos = 0  # read cursor; avoids O(n) front-deletion on the list
 
         for line in self.file_obj:
             line = line.strip()
@@ -82,13 +84,19 @@ class LTspiceFileParser:
             hex_data.extend(line.split())
 
             # Yield complete 8-value blocks as soon as they are available
-            while len(hex_data) >= 8:
-                yield self._convert_hex_block(hex_data[:8])
-                del hex_data[:8]
+            while len(hex_data) - pos >= 8:
+                yield self._convert_hex_block(hex_data[pos : pos + 8])
+                pos += 8
+
+            # Reclaim memory periodically to avoid unbounded list growth
+            if pos >= 1024:
+                del hex_data[:pos]
+                pos = 0
 
         # Yield any remaining partial block (zero-padded)
-        if hex_data:
-            yield self._convert_hex_block(hex_data)
+        remaining = hex_data[pos:]
+        if remaining:
+            yield self._convert_hex_block(remaining)
 
     def decrypt_stream(self) -> Generator[bytes, None, tuple[int, int]]:
         """
@@ -164,11 +172,42 @@ def _detect_ltspice_format(file_obj) -> bool:
     return "* LTspice Encrypted File" in first_line or "* Begin:" in first_line
 
 
+def _run_decrypt_generator(gen, output_file, stack):
+    """Drive a parser's ``decrypt_stream`` generator, writing output.
+
+    Returns ``(content, verification)`` in the same form as
+    :func:`decrypt_stream`.
+    """
+    return_string = output_file is None
+    if return_string:
+        buffer = stack.enter_context(io.StringIO())
+    elif isinstance(output_file, str):
+        output_file = stack.enter_context(open(output_file, "wb"))  # noqa: SIM115
+
+    try:
+        while True:
+            chunk = next(gen)
+            if return_string:
+                buffer.write(chunk.decode("utf-8", errors="replace"))
+            else:
+                output_file.write(chunk)
+    except StopIteration as e:
+        verification = e.value or (0, 0)
+
+    return (buffer.getvalue() if return_string else None), verification
+
+
 def decrypt_stream(
     input_file, output_file=None, is_ltspice_file=None
 ) -> tuple[str | None, tuple[int, int]]:
     """
     Stream decrypt data from input_file to output_file.
+
+    Supports both the text-based hex/DES format and the Binary File
+    format.  When *is_ltspice_file* is ``None`` (the default), the
+    format is auto-detected: files beginning with the Binary File
+    signature are handled by :class:`BinaryFileParser`; otherwise the
+    text-based :class:`LTspiceFileParser` is used.
 
     Args:
         input_file: File object or path to read from
@@ -182,9 +221,23 @@ def decrypt_stream(
             - verification: Tuple of verification values
     """
     with contextlib.ExitStack() as stack:
-        # Handle different input types
+        # Handle path input -- open the file once and detect format from
+        # the initial bytes, avoiding a separate open-read-close probe.
         if isinstance(input_file, str | os.PathLike):
-            input_file = stack.enter_context(open(input_file))
+            if is_ltspice_file is not False:
+                raw = stack.enter_context(open(input_file, "rb"))
+                header = raw.read(20)
+                if BinaryFileParser.check_signature(header):
+                    raw.seek(0)
+                    parser = BinaryFileParser(raw)
+                    return _run_decrypt_generator(parser.decrypt_stream(), output_file, stack)
+                # Not a Binary File -- wrap the already-open handle as text
+                raw.seek(0)
+                input_file = stack.enter_context(
+                    io.TextIOWrapper(raw, encoding="utf-8", errors="replace")
+                )
+            else:
+                input_file = stack.enter_context(open(input_file))
 
         # Auto-detect if file is in LTspice format if not specified
         if is_ltspice_file is None:
@@ -193,28 +246,7 @@ def decrypt_stream(
         # Create parser
         parser = LTspiceFileParser(input_file, raw_mode=not is_ltspice_file)
 
-        # Initialize output handling
-        return_string = output_file is None
-        if return_string:
-            buffer = stack.enter_context(io.StringIO())
-        elif isinstance(output_file, str):
-            output_file = stack.enter_context(open(output_file, "wb"))
-
-        # Stream decrypt -- the generator's return value holds
-        # the verification tuple, which must be captured via
-        # StopIteration after the generator is exhausted.
-        gen = parser.decrypt_stream()
-        try:
-            while True:
-                chunk = next(gen)
-                if return_string:
-                    buffer.write(chunk.decode("utf-8", errors="replace"))
-                else:
-                    output_file.write(chunk)
-        except StopIteration as e:
-            verification = e.value or (0, 0)
-
-        return (buffer.getvalue() if return_string else None), verification
+        return _run_decrypt_generator(parser.decrypt_stream(), output_file, stack)
 
 
 def decrypt(data, is_ltspice_file=None):

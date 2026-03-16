@@ -86,9 +86,9 @@ def _build_sbox_direct_lut(sbox_table, bit_transform):
 
 class LTspiceDES:
     """
-    LTSPice-DES Variant Implementation
+    LTspice-DES Variant Implementation
 
-    A Python port of the encryption algorithm used in LTSPice.
+    A Python port of the encryption algorithm used in LTspice.
     This is a variant of DES with several differences from the standard algorithm.
     """
 
