@@ -32,7 +32,7 @@ import binascii
 import struct
 from collections.abc import Generator
 
-_MASK32 = 0xFFFFFFFF
+from spice_crypt.des import _MASK32
 
 # 20-byte file signature
 SIGNATURE = b"\r\n<Binary File>\r\n\r\n\x1a"
@@ -183,8 +183,8 @@ class BinaryFileParser:
        from the ``key2`` header field.
     2. Each byte is further XOR'd with a value from a 2593-byte
        substitution table, indexed by a linear congruential sequence
-       ``(base + step * N) mod 2593`` whose *step* is always prime,
-       guaranteeing a full-period cycle.
+       ``(base + step * N) mod 2593`` whose *step* is always coprime
+       to 2593, guaranteeing a full-period cycle.
     """
 
     def __init__(self, file_obj):
@@ -245,6 +245,11 @@ class BinaryFileParser:
         # The index sequence (base + step*i) % modulus has period exactly
         # `modulus` (2593) because `step` is always coprime to 2593.
         # Compute one full cycle, then tile to cover the body length.
+        #
+        # Note: the original C code computes (base + step*N) in uint32
+        # arithmetic, which would wrap for N > ~42 MB (step=97).
+        # Pre-computing one cycle and tiling avoids this — step*i stays
+        # well within 32 bits for i in [0, 2592].
         sbox = _SBOX
         modulus = _SBOX_MODULUS
         one_cycle = bytes(sbox[(base + step * i) % modulus] for i in range(modulus))

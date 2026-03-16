@@ -7,8 +7,8 @@ Decryption support for LTspice encrypted text-based (hex/DES) files.
 
 This module provides :class:`LTspiceFileParser` for streaming decryption of
 the text-based hex/DES format, as well as the convenience functions
-:func:`decrypt` and :func:`decrypt_stream` which auto-detect the file format
-(text-based or Binary File) and delegate accordingly.
+:func:`decrypt` and :func:`decrypt_stream`.  The latter auto-detects
+text-based vs. Binary File format.
 """
 
 import binascii
@@ -186,6 +186,21 @@ def _detect_ltspice_format(file_obj) -> bool:
     return "* LTspice Encrypted File" in first_line or "* Begin:" in first_line
 
 
+def _try_binary_file(stream):
+    """Peek at *stream* and return a :class:`BinaryFileParser` if it matches.
+
+    Reads up to 20 bytes from the current position, checks for the Binary
+    File signature, and seeks back.  Returns ``None`` when the signature
+    does not match.
+    """
+    pos = stream.tell()
+    header = stream.read(20)
+    stream.seek(pos)
+    if BinaryFileParser.check_signature(header):
+        return BinaryFileParser(stream)
+    return None
+
+
 def _run_decrypt_generator(gen, output_file, stack):
     """Drive a parser's ``decrypt_stream`` generator, writing output.
 
@@ -240,18 +255,34 @@ def decrypt_stream(
         if isinstance(input_file, str | os.PathLike):
             if is_ltspice_file is not False:
                 raw = stack.enter_context(open(input_file, "rb"))
-                header = raw.read(20)
-                if BinaryFileParser.check_signature(header):
-                    raw.seek(0)
-                    parser = BinaryFileParser(raw)
+                parser = _try_binary_file(raw)
+                if parser is not None:
                     return _run_decrypt_generator(parser.decrypt_stream(), output_file, stack)
                 # Not a Binary File -- wrap the already-open handle as text
-                raw.seek(0)
+                # (_try_binary_file already restored the stream position)
                 input_file = stack.enter_context(
                     io.TextIOWrapper(raw, encoding="utf-8", errors="replace")
                 )
             else:
                 input_file = stack.enter_context(open(input_file))
+
+        # When given a seekable binary file object (not a path), check
+        # for Binary File format before falling through to text-based
+        # detection.  This ensures callers who pass an already-open
+        # binary handle get correct auto-detection.
+        elif (
+            is_ltspice_file is not False
+            and isinstance(input_file, io.RawIOBase | io.BufferedIOBase)
+            and input_file.seekable()
+        ):
+            parser = _try_binary_file(input_file)
+            if parser is not None:
+                return _run_decrypt_generator(parser.decrypt_stream(), output_file, stack)
+            # Not a Binary File -- wrap the binary handle as text so the
+            # text-based detection and LTspiceFileParser receive strings.
+            input_file = stack.enter_context(
+                io.TextIOWrapper(input_file, encoding="utf-8", errors="replace")
+            )
 
         # Auto-detect if file is in LTspice format if not specified
         if is_ltspice_file is None:

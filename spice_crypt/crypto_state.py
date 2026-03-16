@@ -45,7 +45,7 @@ class CryptoState:
 
     def reset(self):
         """
-        Initializes the cryptographic state using the predefined 1024-byte table.
+        Derives the cryptographic state from the 1024-byte crypto table.
         """
         table = self.crypto_table
 

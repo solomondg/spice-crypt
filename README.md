@@ -1,6 +1,6 @@
 # SpiceCrypt
 
-A specialized Python library for decrypting LTspice® encrypted model files. It supports both the text-based format (`.CIR` / `.SUB` files using a modified DES variant) and the Binary File format (a two-layer XOR stream cipher), with automatic format detection.
+A specialized Python library for decrypting LTspice® encrypted model and symbol files. It supports both the text-based format (`.CIR`, `.SUB`, `.LIB`, `.ASY`, and other files using a modified DES variant) and the Binary File format (a two-layer XOR stream cipher), with automatic format detection.
 
 ## Installation
 
@@ -103,9 +103,9 @@ with open("encrypted.CIR") as infile:
 ```
 
 **Parameters:**
-- `input_file`: File path (str/PathLike) or text-mode file object.
+- `input_file`: File path (str/PathLike) or file object (text or binary mode).
 - `output_file` (optional): File path (str) or binary-mode file object. If `None`, returns decrypted content as a string.
-- `is_ltspice_file` (bool, optional): Whether the input is in LTspice text format. Auto-detected if `None`.
+- `is_ltspice_file` (bool, optional): Whether the input is in LTspice format. Auto-detected if `None`.
 
 **Returns:** `(content, (v1, v2))`: `content` is the decrypted string if no output file was given, otherwise `None`. `(v1, v2)` are verification values -- for the text-based format these are CRC-based checksums that should match the values on the file's `End` line; for the Binary File format they are a CRC-32 and rotate-left hash of the decrypted content.
 
@@ -145,7 +145,7 @@ Encrypted files in this format are binary files identified by a 20-byte signatur
 
 ## Specification
 
-For a detailed technical description of the encryption scheme -- including the full key derivation process, pre-DES stream cipher layer, all deviations from standard DES, and the integrity verification mechanism: see [SPECIFICATION.md](SPECIFICATION.md).
+For a detailed technical description of both encryption schemes -- including key derivation, the pre-DES stream cipher layer, all deviations from standard DES, and the Binary File XOR stream cipher -- see [SPECIFICATION.md](SPECIFICATION.md).
 
 ## Purpose and Legal Basis
 

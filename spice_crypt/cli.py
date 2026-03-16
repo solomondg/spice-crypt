@@ -44,7 +44,7 @@ def main():
     )
     parser.add_argument(
         "input_file",
-        help="Path to the encrypted file to decrypt (LTspice .CIR/.SUB format or raw hex)",
+        help="Path to the encrypted file to decrypt (LTspice encrypted format or raw hex)",
     )
     parser.add_argument("-o", "--output", help="Output file path (default: print to stdout)")
     parser.add_argument(
@@ -61,6 +61,7 @@ def main():
         "--version",
         action=_DeprecatedShortVersionAction,
         version=f"SpiceCrypt {__version__}",
+        help="Show program version and exit",
     )
 
     verbosity = parser.add_mutually_exclusive_group()

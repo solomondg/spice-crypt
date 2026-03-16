@@ -1,10 +1,10 @@
 # LTspice® Encryption Specification
 
-**Version**: 1.1.0 ([changelog](#changelog))\
+**Version**: 1.2.0 ([changelog](#changelog))\
 **Author**: Joe T. Sylve, Ph.D. \<joe.sylve@gmail.com\> \
 **Repository**: https://github.com/jtsylve/spice-crypt
 
-This document describes the two encryption schemes used by LTspice to protect proprietary circuit model files (`.CIR` / `.SUB`). The text-based format ([Chapter 1](#1-text-based-des-format)) uses a modified variant of the Data Encryption Standard (DES), combined with a pre-DES stream cipher layer and a custom key derivation process. The binary format ([Chapter 2](#2-binary-file-format)) uses a two-layer XOR stream cipher and is unrelated to the DES-based scheme.
+This document describes the two encryption schemes used by LTspice to protect proprietary model and symbol files (`.CIR`, `.SUB`, `.LIB`, `.ASY`, and others). The text-based format ([Chapter 1](#1-text-based-des-format)) uses a modified variant of the Data Encryption Standard (DES), combined with a pre-DES stream cipher layer and a custom key derivation process. The binary format ([Chapter 2](#2-binary-file-format)) uses a two-layer XOR stream cipher and is unrelated to the DES-based scheme.
 
 [SpiceCrypt](https://github.com/jtsylve/spice-crypt) is a reference implementation of this specification, available as a command-line tool and Python library under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
 
@@ -31,7 +31,7 @@ Both activities are specifically permitted by law:
 
 ## License
 
-Copyright © 2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
+Copyright © 2025-2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
 
 This document is licensed under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/) (CC-BY-4.0). You are free to share and adapt this material for any purpose, including commercial use, provided appropriate credit is given.
 
@@ -63,7 +63,7 @@ An LTspice encrypted file in the text-based format is a plain-text file with the
 * End <v1> <v2>
 ```
 
-**Header**: Lines beginning with `*` before the `* Begin:` marker are comments and are ignored during decryption. The `* Begin:` marker is matched case-insensitively.
+**Header**: The first 9 lines (from `* LTspice Encrypted File` through `* contents.`) are a fixed header that LTspice validates exactly; files with modified or missing header lines are rejected. The `* Begin:` marker is matched case-insensitively.
 
 **Hex payload**: After the `* Begin:` marker, the file contains space-separated hexadecimal byte values. Each pair of hex characters represents one byte. Whitespace (spaces and newlines) separates individual byte values. Lines beginning with `*` within the payload are comments and are skipped.
 
@@ -74,7 +74,7 @@ An LTspice encrypted file in the text-based format is a plain-text file with the
 | 0 -- 127    | 128 blocks (1024 bytes) | Crypto table (key material)   |
 | 128+        | Variable  | Ciphertext blocks                      |
 
-If the final ciphertext block contains fewer than 8 bytes, it is zero-padded on the right.
+If the final ciphertext block contains fewer than 8 bytes, it is discarded -- the partial bytes are included in the ciphertext CRC but are not decrypted. In practice, LTspice always produces payloads that are exact multiples of 8 bytes.
 
 **End line**: The `* End` line contains two unsigned 32-bit decimal integers, `v1` and `v2`, which are CRC-32-based verification checksums (see [Section 1.6](#16-integrity-verification)).
 
@@ -140,7 +140,7 @@ The original LTspice binary contains two additional passes over the crypto table
 - **Pass 2 (byte-group sums)**: The table is treated as 256 groups of 4 bytes. Four positional accumulators sum the bytes at each offset within the groups, and the totals are added together. The result is discarded.
 - **Pass 3 (word-group sums)**: The table is treated as 128 groups of 8 bytes (four little-endian 16-bit words per group). Four positional accumulators sum the words at each offset, and the totals are added together. The result is discarded.
 
-These may be vestiges of a previous version of the algorithm or placeholders for future use.
+Additionally, after all passes complete, a single DES encryption call is made using the combined pass-2 and pass-3 intermediate values as input. The 32-bit result is stored but never read during decryption; it has no effect on the algorithm's output. All of the above may be vestiges of a previous version of the algorithm or deliberate obfuscation.
 
 ### 1.3 Pre-DES Stream Cipher Layer
 
@@ -288,6 +288,8 @@ v2 = ciphertext_crc XOR 0x4DA77FD3 XOR table_word_94
 
 These values are compared against the two integers on the `* End` line of the file. A mismatch indicates data corruption or an incorrect decryption implementation.
 
+> **Validation order**: LTspice performs a two-pass validation: the first pass decrypts the entire file and verifies the CRC checksums against the `* End` line. Only if they match does a second pass produce decrypted output. Files with CRC mismatches are rejected entirely.
+
 ### 1.7 S-Box Layout
 
 The S-box data is stored in a flat array with 1-based indexing (index 0 is padding). Each S-box maps a 6-bit input to a 4-bit output. The 6-bit input is decomposed as:
@@ -398,6 +400,8 @@ The two XOR layers are:
 2. **S-box keystream XOR**: Each byte is XOR'd with a value from the 2593-byte substitution table. The index into this table advances linearly: starting at `base`, incrementing by `step` each byte, modulo 2593. The full-period property of this sequence (see [Section 2.2.2](#222-step-value-selection)) means the keystream repeats only after 2593 bytes.
 
 Both layers commute (XOR is associative and commutative), so they can be applied in either order or combined into a single pass.
+
+> **Note on index arithmetic**: The index expression `base + step × N` is computed using 32-bit unsigned arithmetic. For files exceeding approximately 42 MB (with step=97), the multiplication wraps modulo 2^32, producing a different index sequence than the mathematical formula. Encrypted files in practice are well below this threshold.
 
 ### 2.4 Integrity Verification
 
@@ -553,6 +557,15 @@ dfb37f6ccac8257e1a5fc11ee18d8a51ae938a2570665102c8b6c31c808c525e
 ```
 
 ## Changelog
+
+### 1.2.0
+
+- Broadened file type scope from `.CIR`/`.SUB` to include `.LIB`, `.ASY`, and other encrypted file types.
+- Documented the fixed 9-line header validation (Section 1.1).
+- Corrected partial final block handling: incomplete blocks are discarded, not zero-padded (Section 1.1).
+- Documented the unused DES encryption call in key derivation that consumes pass-2/pass-3 intermediate values (Section 1.2.3).
+- Documented two-pass CRC validation behavior (Section 1.6).
+- Added note on 32-bit unsigned index arithmetic in the Binary File format (Section 2.3).
 
 ### 1.1.0
 
