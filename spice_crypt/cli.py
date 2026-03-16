@@ -10,10 +10,31 @@ Command-line interface for SpiceCrypt
 
 import argparse
 import sys
+import warnings
 from pathlib import Path
 
 from spice_crypt import __version__
 from spice_crypt.decrypt import decrypt_stream
+
+
+class _DeprecatedShortVersionAction(argparse.Action):
+    """Handles deprecated ``-v`` flag for ``--version``."""
+
+    def __init__(self, option_strings, version, **kwargs):
+        kwargs.setdefault("nargs", 0)
+        kwargs.setdefault("default", argparse.SUPPRESS)
+        self.version = version
+        super().__init__(option_strings=option_strings, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if option_string == "-v":
+            warnings.warn(
+                "-v is deprecated for --version, use --version instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        print(self.version)
+        parser.exit()
 
 
 def main():
@@ -35,16 +56,25 @@ def main():
         action="store_true",
         help="Treat input as raw hex data instead of LTspice® format",
     )
-    parser.add_argument("-v", "--version", action="version", version=f"SpiceCrypt {__version__}")
-    parser.add_argument("--verbose", action="store_true", help="Display additional information")
+    parser.add_argument(
+        "-v",
+        "--version",
+        action=_DeprecatedShortVersionAction,
+        version=f"SpiceCrypt {__version__}",
+    )
+
+    verbosity = parser.add_mutually_exclusive_group()
+    verbosity.add_argument("--verbose", action="store_true", help="Display additional information")
+    verbosity.add_argument("--quiet", action="store_true", help="Suppress all error messages")
 
     args = parser.parse_args()
 
     # Check if output file exists and handle accordingly
     if args.output and Path(args.output).exists() and not args.force:
-        sys.stderr.write(
-            f"Error: Output file '{args.output}' already exists. Use --force to overwrite.\n"
-        )
+        if not args.quiet:
+            sys.stderr.write(
+                f"Error: Output file '{args.output}' already exists. Use --force to overwrite.\n"
+            )
         return 1
 
     try:
@@ -69,13 +99,16 @@ def main():
             print(f"Verification values: {verification}", file=sys.stderr)
 
     except FileNotFoundError:
-        sys.stderr.write(f"Error: File not found: {args.input_file}\n")
+        if not args.quiet:
+            sys.stderr.write(f"Error: File not found: {args.input_file}\n")
         return 1
     except ValueError as e:
-        sys.stderr.write(f"Error: {e}\n")
+        if not args.quiet:
+            sys.stderr.write(f"Error: {e}\n")
         return 1
     except Exception as e:
-        sys.stderr.write(f"Error during decryption: {e}\n")
+        if not args.quiet:
+            sys.stderr.write(f"Error during decryption: {e}\n")
         return 1
 
     return 0
@@ -83,8 +116,6 @@ def main():
 
 def main_deprecated():
     """Deprecated entry point. Use ``spice-crypt`` instead."""
-    import warnings
-
     warnings.warn(
         "spice-decrypt is deprecated, use spice-crypt instead",
         DeprecationWarning,

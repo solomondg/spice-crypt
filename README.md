@@ -59,7 +59,7 @@ spice-crypt --verbose path/to/encrypted_file.CIR
 spice-crypt --raw path/to/hex_file.txt
 
 # Show version
-spice-crypt -v
+spice-crypt --version
 ```
 
 ## Python API
