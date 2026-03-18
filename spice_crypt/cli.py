@@ -40,7 +40,7 @@ class _DeprecatedShortVersionAction(argparse.Action):
 def main():
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
-        description="SpiceCrypt - A tool for decrypting LTspice® encrypted files"
+        description="SpiceCrypt - A tool for decrypting LTspice® and PSpice® encrypted files"
     )
     parser.add_argument(
         "input_file",

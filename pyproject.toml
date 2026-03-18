@@ -4,15 +4,15 @@
 
 [project]
 name = "spice-crypt"
-version = "1.2.0"
-description = "A library for decrypting LTspice® encrypted files"
+version = "2.0.0-dev"
+description = "A library for decrypting LTspice® and PSpice® encrypted files"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"
 authors = [
     { name = "Joe T. Sylve, Ph.D.", email = "joe.sylve@gmail.com" },
 ]
-keywords = ["ltspice", "spice", "decryption", "eda", "circuit-simulation"]
+keywords = ["ltspice", "pspice", "spice", "decryption", "eda", "circuit-simulation"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
@@ -35,6 +35,9 @@ Issues = "https://github.com/jtsylve/spice-crypt/issues"
 [project.scripts]
 spice-crypt = "spice_crypt.cli:main"
 spice-decrypt = "spice_crypt.cli:main_deprecated"
+
+[project.optional-dependencies]
+aes = ["cryptography>=44.0"]
 
 [dependency-groups]
 dev = [
