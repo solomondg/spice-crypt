@@ -28,6 +28,15 @@ repos:
       - id: clippy
         args: [--manifest-path, Cargo.toml, --, -D, warnings]
 
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: uv run python -B -m pytest tests/
+        language: system
+        pass_filenames: false
+        always_run: true
+
   - repo: https://github.com/fsfe/reuse-tool
     rev: v6.2.0
     hooks:

@@ -165,7 +165,7 @@ Mode 4 optionally incorporates a user-provided key to modify the base key consta
 The CSV file has lines of the form:
 
 ```
-<file_path>; <key_bytes>
+<file_path> ; <key_bytes>
 ```
 
 The first entry whose file path does not match the file being decrypted provides the key bytes.

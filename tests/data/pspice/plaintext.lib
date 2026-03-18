@@ -1,0 +1,6 @@
+*$
+* PSpice Model - Test Resistor
+*$
+.subckt TEST_RES 1 2
+R1 1 2 1k
+.ends TEST_RES
