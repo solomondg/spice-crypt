@@ -49,7 +49,7 @@ uv lock --upgrade-package spice-crypt
 
 ## Command Line Usage
 
-SpiceCrypt provides a `spice-crypt` command for decrypting LTspice and PSpice encrypted files.  The legacy `spice-decrypt` alias is deprecated and will be removed in a future release.
+SpiceCrypt provides a `spice-crypt` command for decrypting LTspice and PSpice encrypted files.
 
 ```bash
 # Run directly without installing

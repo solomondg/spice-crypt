@@ -10,31 +10,10 @@ Command-line interface for SpiceCrypt
 
 import argparse
 import sys
-import warnings
 from pathlib import Path
 
 from spice_crypt import __version__
 from spice_crypt.decrypt import decrypt_stream
-
-
-class _DeprecatedShortVersionAction(argparse.Action):
-    """Handles deprecated ``-v`` flag for ``--version``."""
-
-    def __init__(self, option_strings, version, **kwargs):
-        kwargs.setdefault("nargs", 0)
-        kwargs.setdefault("default", argparse.SUPPRESS)
-        self.version = version
-        super().__init__(option_strings=option_strings, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        if option_string == "-v":
-            warnings.warn(
-                "-v is deprecated for --version, use --version instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        print(self.version)
-        parser.exit()
 
 
 def _recover_key(args):
@@ -84,11 +63,9 @@ def main():
         help="Treat input as raw hex data instead of LTspice® format",
     )
     parser.add_argument(
-        "-v",
         "--version",
-        action=_DeprecatedShortVersionAction,
+        action="version",
         version=f"SpiceCrypt {__version__}",
-        help="Show program version and exit",
     )
 
     parser.add_argument(
@@ -157,16 +134,6 @@ def main():
         return 1
 
     return 0
-
-
-def main_deprecated():
-    """Deprecated entry point. Use ``spice-crypt`` instead."""
-    warnings.warn(
-        "spice-decrypt is deprecated, use spice-crypt instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return main()
 
 
 if __name__ == "__main__":

@@ -2,8 +2,20 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-"""Backward-compatibility shim — imports moved to :mod:`spice_crypt.ltspice.binary_file`."""
+"""Backward-compatibility shim — imports moved to :mod:`spice_crypt.ltspice.binary_file`.
+
+.. deprecated:: 2.0.0
+    Import from :mod:`spice_crypt.ltspice.binary_file` instead.
+"""
+
+import warnings
 
 from spice_crypt.ltspice.binary_file import SIGNATURE, BinaryFileParser
+
+warnings.warn(
+    "spice_crypt.binary_file is deprecated, use spice_crypt.ltspice.binary_file instead",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 __all__ = ["SIGNATURE", "BinaryFileParser"]

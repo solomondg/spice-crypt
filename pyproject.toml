@@ -33,7 +33,6 @@ Issues = "https://github.com/jtsylve/spice-crypt/issues"
 
 [project.scripts]
 spice-crypt = "spice_crypt.cli:main"
-spice-decrypt = "spice_crypt.cli:main_deprecated"
 
 [dependency-groups]
 dev = [
