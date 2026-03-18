@@ -4,40 +4,40 @@
 **Author**: Joe T. Sylve, Ph.D. \<joe.sylve@gmail.com\> \
 **Repository**: https://github.com/jtsylve/spice-crypt
 
-This document describes the two encryption schemes used by LTspice to protect proprietary model and symbol files (`.CIR`, `.SUB`, `.LIB`, `.ASY`, and others). The text-based format ([Chapter 1](#1-text-based-des-format)) uses a modified variant of the Data Encryption Standard (DES), combined with a pre-DES stream cipher layer and a custom key derivation process. The binary format ([Chapter 2](#2-binary-file-format)) uses a two-layer XOR stream cipher and is unrelated to the DES-based scheme.
+This document describes the two encryption schemes used by LTspice to protect proprietary model and symbol files (`.CIR`, `.SUB`, `.LIB`, `.ASY`, and others).  The text-based format ([Chapter 1](#1-text-based-des-format)) uses a modified variant of the Data Encryption Standard (DES), combined with a pre-DES stream cipher layer and a custom key derivation process.  The binary format ([Chapter 2](#2-binary-file-format)) uses a two-layer XOR stream cipher and is unrelated to the DES-based scheme.
 
 [SpiceCrypt](https://github.com/jtsylve/spice-crypt) is a reference implementation of this specification, available as a command-line tool and Python library under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
 
 
 ## Purpose
 
-Many third-party component vendors distribute SPICE simulation models exclusively as LTspice-encrypted files. This encryption locks the models to a single proprietary simulator, preventing their use in open-source and alternative tools such as NGSpice, Xyce, PySpice, and others.
+Many third-party component vendors distribute SPICE simulation models exclusively as LTspice-encrypted files.  This encryption locks the models to a single proprietary simulator, preventing their use in open-source and alternative tools such as NGSpice, Xyce, PySpice, and others.
 
 This specification is published in service of two goals:
 
-- **Interoperability**: Documenting the encryption schemes allows developers of alternative SPICE simulators to support lawfully obtained encrypted models. The accompanying [SpiceCrypt](README.md) reference implementation demonstrates working decryption based on this specification.
-- **Encryption research**: Both schemes rely on security through obscurity -- the key material is stored in the clear alongside the ciphertext, and neither scheme provides meaningful cryptographic protection (see Sections [1.8](#18-security-assessment) and [2.5](#25-security-assessment)). Documenting these properties illustrates how proprietary encryption schemes deviate from established standards.
+- **Interoperability**: Documenting the encryption schemes allows developers of alternative SPICE simulators to support lawfully obtained encrypted models.  The accompanying [SpiceCrypt](../README.md) reference implementation demonstrates working decryption based on this specification.
+- **Encryption research**: Both schemes rely on security through obscurity — the key material is stored in the clear alongside the ciphertext, and neither scheme provides meaningful cryptographic protection (see Sections [1.8](#18-security-assessment) and [2.5](#25-security-assessment)).  Documenting these properties illustrates how proprietary encryption schemes deviate from established standards.
 
 Both activities are specifically permitted by law:
 
 - **United States**: [17 U.S.C. § 1201(f)](https://www.law.cornell.edu/uscode/text/17/1201) permits circumvention of technological protection measures for the purpose of achieving interoperability between independently created programs, and Section 1201(f)(2) explicitly allows distributing the tools developed for this purpose. [§ 1201(g)](https://www.law.cornell.edu/uscode/text/17/1201) further permits circumvention conducted in good-faith encryption research and allows dissemination of the findings.
-- **European Union**: [Article 6 of the Software Directive (2009/24/EC)](https://eur-lex.europa.eu/eli/dir/2009/24/oj) permits decompilation and reverse engineering when indispensable to achieve interoperability with independently created programs. Article 6(3) provides that this right cannot be overridden by contract.
+- **European Union**: [Article 6 of the Software Directive (2009/24/EC)](https://eur-lex.europa.eu/eli/dir/2009/24/oj) permits decompilation and reverse engineering when indispensable to achieve interoperability with independently created programs.  Article 6(3) provides that this right cannot be overridden by contract.
 
 
 ## Contributors
 
-- **Joe T. Sylve, Ph.D.** -- Research and documentation of the text-based DES encryption format ([Chapter 1](#1-text-based-des-format)).
-- **Lucas Gerads** -- Research and documentation of the Binary File encryption format ([Chapter 2](#2-binary-file-format)).
+- **Joe T. Sylve, Ph.D.** — Research and documentation of the text-based DES encryption format ([Chapter 1](#1-text-based-des-format)).
+- **Lucas Gerads** — Research and documentation of the Binary File encryption format ([Chapter 2](#2-binary-file-format)).
 
 ## License
 
-Copyright © 2025-2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
+Copyright © 2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
 
-This document is licensed under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/) (CC-BY-4.0). You are free to share and adapt this material for any purpose, including commercial use, provided appropriate credit is given.
+This document is licensed under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/) (CC-BY-4.0).  You are free to share and adapt this material for any purpose, including commercial use, provided appropriate credit is given.
 
 ## 1. Text-Based DES Format
 
-This chapter describes the text-based encryption format. Encrypted files in this format contain hex-encoded ciphertext processed through a pre-DES stream cipher and a modified DES block cipher. Each deviation from standard DES is explicitly noted.
+This chapter describes the text-based encryption format.  Encrypted files in this format contain hex-encoded ciphertext processed through a pre-DES stream cipher and a modified DES block cipher.  Each deviation from standard DES is explicitly noted.
 
 ### 1.1 Encrypted File Format
 
@@ -63,18 +63,18 @@ An LTspice encrypted file in the text-based format is a plain-text file with the
 * End <v1> <v2>
 ```
 
-**Header**: The first 9 lines (from `* LTspice Encrypted File` through `* contents.`) are a fixed header that LTspice validates exactly; files with modified or missing header lines are rejected. The `* Begin:` marker is matched case-insensitively.
+**Header**: The first 9 lines (from `* LTspice Encrypted File` through `* contents.`) are a fixed header that LTspice validates exactly; files with modified or missing header lines are rejected.  The `* Begin:` marker is matched case-insensitively.
 
-**Hex payload**: After the `* Begin:` marker, the file contains space-separated hexadecimal byte values. Each pair of hex characters represents one byte. Whitespace (spaces and newlines) separates individual byte values. Lines beginning with `*` within the payload are comments and are skipped.
+**Hex payload**: After the `* Begin:` marker, the file contains space-separated hexadecimal byte values.  Each pair of hex characters represents one byte.  Whitespace (spaces and newlines) separates individual byte values.  Lines beginning with `*` within the payload are comments and are skipped.
 
 **Payload structure**: The hex payload is consumed as a flat stream of bytes, grouped into 8-byte (64-bit) blocks:
 
 | Block range  | Count     | Purpose                                |
 |-------------|-----------|----------------------------------------|
-| 0 -- 127    | 128 blocks (1024 bytes) | Crypto table (key material)   |
+| 0–127       | 128 blocks (1024 bytes) | Crypto table (key material)   |
 | 128+        | Variable  | Ciphertext blocks                      |
 
-If the final ciphertext block contains fewer than 8 bytes, it is discarded -- the partial bytes are included in the ciphertext CRC but are not decrypted. In practice, LTspice always produces payloads that are exact multiples of 8 bytes.
+If the final ciphertext block contains fewer than 8 bytes, it is discarded — the partial bytes are included in the ciphertext CRC but are not decrypted.  In practice, LTspice always produces payloads that are exact multiples of 8 bytes.
 
 **End line**: The `* End` line contains two unsigned 32-bit decimal integers, `v1` and `v2`, which are CRC-32-based verification checksums (see [Section 1.6](#16-integrity-verification)).
 
@@ -84,7 +84,7 @@ The 64-bit DES key and the initial stream cipher state are derived entirely from
 
 #### 1.2.1 Byte Checksums (Stream Cipher Seeds)
 
-The table bytes are split by parity of their index position. Two 8-bit checksums are computed:
+The table bytes are split by parity of their index position.  Two 8-bit checksums are computed:
 
 ```
 even_byte_sum = (table[0] + table[2] + table[4] + ... + table[1022]) mod 256
@@ -102,7 +102,7 @@ The `even_byte_checksum` acts as a fixed increment and `odd_byte_checksum` acts 
 
 #### 1.2.2 DES Key Construction
 
-The table is also processed at the 64-bit (qword) level. It is treated as 64 groups of 16 bytes (two little-endian 64-bit words per group). The even-offset and odd-offset qwords are accumulated separately:
+The table is also processed at the 64-bit (qword) level.  It is treated as 64 groups of 16 bytes (two little-endian 64-bit words per group).  The even-offset and odd-offset qwords are accumulated separately:
 
 ```
 qword_sum_even = 0
@@ -131,20 +131,20 @@ key_high = qword_high_word XOR 0x20E905C8
 key      = (key_high << 32) | key_low
 ```
 
-> **Note on key entropy**: Although the key is 64 bits wide, it is derived from only two independent 16-bit values (extracted from bits [15:0] and [47:32] of the combined qword sum). Bits [31:16] and [63:48] of each key half are entirely determined by the fixed XOR constants. The effective key entropy is therefore at most 32 bits, significantly less than the 56-bit effective key size of standard DES.
+> **Note on key entropy**: Although the key is 64 bits wide, it is derived from only two independent 16-bit values (extracted from bits [15:0] and [47:32] of the combined qword sum).  Bits [31:16] and [63:48] of each key half are entirely determined by the fixed XOR constants.  The effective key entropy is therefore at most 32 bits, significantly less than the 56-bit effective key size of standard DES.
 
 #### 1.2.3 Unused Intermediate Passes
 
 The original LTspice binary contains two additional passes over the crypto table whose results are computed but never used:
 
-- **Pass 2 (byte-group sums)**: The table is treated as 256 groups of 4 bytes. Four positional accumulators sum the bytes at each offset within the groups, and the totals are added together. The result is discarded.
-- **Pass 3 (word-group sums)**: The table is treated as 128 groups of 8 bytes (four little-endian 16-bit words per group). Four positional accumulators sum the words at each offset, and the totals are added together. The result is discarded.
+- **Pass 2 (byte-group sums)**: The table is treated as 256 groups of 4 bytes.  Four positional accumulators sum the bytes at each offset within the groups, and the totals are added together.  The result is discarded.
+- **Pass 3 (word-group sums)**: The table is treated as 128 groups of 8 bytes (four little-endian 16-bit words per group).  Four positional accumulators sum the words at each offset, and the totals are added together.  The result is discarded.
 
-Additionally, after all passes complete, a single DES encryption call is made using the combined pass-2 and pass-3 intermediate values as input. The 32-bit result is stored but never read during decryption; it has no effect on the algorithm's output. All of the above may be vestiges of a previous version of the algorithm or deliberate obfuscation.
+Additionally, after all passes complete, a single DES encryption call is made using the combined pass-2 and pass-3 intermediate values as input.  The 32-bit result is stored but never read during decryption; it has no effect on the algorithm's output.  All of the above may be vestiges of a previous version of the algorithm or deliberate obfuscation.
 
 ### 1.3 Pre-DES Stream Cipher Layer
 
-Before each 8-byte ciphertext block is passed to the DES decryption function, a stream cipher layer XORs each byte of the block with a byte selected from the crypto table. This layer uses two state variables, `odd_byte_checksum` and `even_byte_checksum`, initialized during key derivation ([Section 1.2.1](#121-byte-checksums-stream-cipher-seeds)).
+Before each 8-byte ciphertext block is passed to the DES decryption function, a stream cipher layer XORs each byte of the block with a byte selected from the crypto table.  This layer uses two state variables, `odd_byte_checksum` and `even_byte_checksum`, initialized during key derivation ([Section 1.2.1](#121-byte-checksums-stream-cipher-seeds)).
 
 For each byte `i` (0 through 7) within a block:
 
@@ -156,16 +156,16 @@ block[i]         ^= crypto_table[table_index]
 
 Key observations:
 
-- **`even_byte_checksum` is constant** -- it is set once during key derivation and never modified. It serves as a fixed additive step.
-- **`odd_byte_checksum` is a running accumulator** -- it advances by `even_byte_checksum` for every byte processed across all blocks. Its arithmetic is mod 2^32 (it is promoted from its initial 8-bit value to a 32-bit accumulator on the first addition).
-- **Table index range**: The modulus `0x3FD` (1021) combined with the `+1` offset produces indices in the range [1, 1021]. Index 0 is never used.
-- **State carries across blocks** -- the checksum state is not reset between blocks, making this a proper stream cipher where the keystream depends on the block position.
+- **`even_byte_checksum` is constant** — it is set once during key derivation and never modified.  It serves as a fixed additive step.
+- **`odd_byte_checksum` is a running accumulator** — it advances by `even_byte_checksum` for every byte processed across all blocks.  Its arithmetic is mod 2^32 (it is promoted from its initial 8-bit value to a 32-bit accumulator on the first addition).
+- **Table index range**: The modulus `0x3FD` (1021) combined with the `+1` offset produces indices in the range [1, 1021].  Index 0 is never used.
+- **State carries across blocks** — the checksum state is not reset between blocks, making this a proper stream cipher where the keystream depends on the block position.
 
 After the XOR pass, the modified 8-byte block is interpreted as a little-endian 64-bit integer and passed to the DES decryption function.
 
 ### 1.4 DES Variant: Deviations from FIPS 46-3
 
-The core block cipher is a 16-round Feistel network structurally similar to DES (FIPS 46-3), using the same permutation tables (IP, IP^-1, E, P, PC-1, PC-2) and S-boxes. However, the LTspice implementation introduces several deviations from the standard.
+The core block cipher is a 16-round Feistel network structurally similar to DES (FIPS 46-3), using the same permutation tables (IP, IP^-1, E, P, PC-1, PC-2) and S-boxes.  However, the LTspice implementation introduces several deviations from the standard.
 
 #### 1.4.1 Pre-Permutation Half-Swap (Input Block)
 
@@ -213,7 +213,7 @@ This produces an entirely different set of 16 round subkeys from the same starti
 
 **Standard DES**: After the final permutation (IP^-1), the full 64-bit result is returned as the ciphertext/plaintext block.
 
-**LTspice variant**: Only the low 32 bits of the IP^-1 output are retained. The upper 32 bits are discarded:
+**LTspice variant**: Only the low 32 bits of the IP^-1 output are retained.  The upper 32 bits are discarded:
 
 ```
 result = FP(combined) & 0xFFFFFFFF   # only low 32 bits
@@ -230,7 +230,7 @@ The following components are identical to standard DES:
 | Initial Permutation (IP) | Standard 64-bit IP table |
 | Final Permutation (IP^-1) | Standard 64-bit FP table |
 | Expansion (E) | Standard 32-to-48-bit expansion |
-| S-boxes (S1--S8) | Standard 8 S-boxes, 6-bit input to 4-bit output |
+| S-boxes (S1–S8) | Standard 8 S-boxes, 6-bit input to 4-bit output |
 | P-box (P) | Standard 32-bit permutation |
 | PC-1 | Standard 64-to-56-bit permuted choice |
 | PC-2 | Standard 56-to-48-bit permuted choice |
@@ -240,7 +240,7 @@ The following components are identical to standard DES:
 
 #### 1.4.6 Combined Effect
 
-The half-swaps (Sections [1.4.1](#141-pre-permutation-half-swap-input-block) and [1.4.2](#142-pre-pc-1-half-swap-key-schedule)) and the reversed rotation ([Section 1.4.3](#143-reversed-key-rotation-direction)) together mean that even with the same key and plaintext, the LTspice variant produces completely different round computations and outputs compared to standard DES. These modifications are not equivalent to any simple re-keying or re-ordering of the standard algorithm. The output truncation ([Section 1.4.4](#144-output-truncation)) further means the cipher has fundamentally different input/output dimensions: 64 bits in, 32 bits out -- making it a one-way compression function rather than a bijective block cipher.
+The half-swaps (Sections [1.4.1](#141-pre-permutation-half-swap-input-block) and [1.4.2](#142-pre-pc-1-half-swap-key-schedule)) and the reversed rotation ([Section 1.4.3](#143-reversed-key-rotation-direction)) together mean that even with the same key and plaintext, the LTspice variant produces completely different round computations and outputs compared to standard DES.  These modifications are not equivalent to any simple re-keying or re-ordering of the standard algorithm.  The output truncation ([Section 1.4.4](#144-output-truncation)) further means the cipher has fundamentally different input/output dimensions: 64 bits in, 32 bits out — making it a one-way compression function rather than a bijective block cipher.
 
 ### 1.5 Block Decryption Pipeline
 
@@ -286,20 +286,20 @@ v1 = plaintext_crc  XOR 0x7A6D2C3A XOR table_word_44
 v2 = ciphertext_crc XOR 0x4DA77FD3 XOR table_word_94
 ```
 
-These values are compared against the two integers on the `* End` line of the file. A mismatch indicates data corruption or an incorrect decryption implementation.
+These values are compared against the two integers on the `* End` line of the file.  A mismatch indicates data corruption or an incorrect decryption implementation.
 
-> **Validation order**: LTspice performs a two-pass validation: the first pass decrypts the entire file and verifies the CRC checksums against the `* End` line. Only if they match does a second pass produce decrypted output. Files with CRC mismatches are rejected entirely.
+> **Validation order**: LTspice performs a two-pass validation: the first pass decrypts the entire file and verifies the CRC checksums against the `* End` line.  Only if they match does a second pass produce decrypted output.  Files with CRC mismatches are rejected entirely.
 
 ### 1.7 S-Box Layout
 
-The S-box data is stored in a flat array with 1-based indexing (index 0 is padding). Each S-box maps a 6-bit input to a 4-bit output. The 6-bit input is decomposed as:
+The S-box data is stored in a flat array with 1-based indexing (index 0 is padding).  Each S-box maps a 6-bit input to a 4-bit output.  The 6-bit input is decomposed as:
 
 ```
 row    = (bit5 << 0) | (bit0 << 1)                           # 2 bits from MSB and LSB
 column = (bit1 << 3) | (bit2 << 2) | (bit3 << 1) | bit4     # 4 bits from middle, reversed
 ```
 
-> Note: Both the row and column bit orderings are reversed compared to standard DES. In standard DES, row = {bit5, bit0} (bit5 as MSB) and column = {bit4, bit3, bit2, bit1} (bit4 as MSB). In this implementation, bit0 is the MSB of row and bit1 is the MSB of column. The interleaved S-box storage and bit-transform together compensate for this, producing the same net substitution values as standard DES S-boxes.
+> Note: Both the row and column bit orderings are reversed compared to standard DES.  In standard DES, row = {bit5, bit0} (bit5 as MSB) and column = {bit4, bit3, bit2, bit1} (bit4 as MSB).  In this implementation, bit0 is the MSB of row and bit1 is the MSB of column.  The interleaved S-box storage and bit-transform together compensate for this, producing the same net substitution values as standard DES S-boxes.
 
 The S-box value is looked up at flat-array offset:
 
@@ -307,7 +307,7 @@ The S-box value is looked up at flat-array offset:
 offset = (36 * column) + (9 * row) + sbox_index + 1
 ```
 
-where `sbox_index` ranges from 0 to 7. This interleaved storage format differs from the conventional per-S-box matrix layout in DES literature, but produces the same mapping.
+where `sbox_index` ranges from 0 to 7.  This interleaved storage format differs from the conventional per-S-box matrix layout in DES literature, but produces the same mapping.
 
 After lookup, the 4-bit S-box output is passed through a bit-transform table that reverses the bit order:
 
@@ -317,20 +317,20 @@ DES_BIT_TRANSFORM[n]:
   8→1, 9→9, A→5, B→D, C→3, D→B, E→7, F→F
 ```
 
-This is equivalent to reflecting bits [3:0] to [0:3] (i.e., bit-reversal within the nibble). This transform is folded into the S-box output as part of the implementation, but the net result of S-box + transform produces the same 4-bit substitution values as standard DES S-boxes -- the transform compensates for the interleaved storage format.
+This is equivalent to reflecting bits [3:0] to [0:3] (i.e., bit-reversal within the nibble).  This transform is folded into the S-box output as part of the implementation, but the net result of S-box + transform produces the same 4-bit substitution values as standard DES S-boxes — the transform compensates for the interleaved storage format.
 
 ### 1.8 Security Assessment
 
 From a cryptographic perspective:
 
-- **Low effective key entropy**: The DES key is derived from only 32 bits of independent data (two 16-bit words extracted from the crypto table checksum). This is well below the 56-bit effective key size of standard DES and far below modern standards.
-- **Static key material in cleartext**: The entire 1024-byte crypto table from which the key is derived is stored in the clear as the first 128 blocks of the payload. Anyone with knowledge of the key derivation algorithm can compute the key.
-- **Deterministic stream cipher**: The pre-DES XOR layer's keystream is fully determined by the crypto table, which is public. It adds no additional security beyond the DES layer.
-- **Obfuscation, not encryption**: The security of this scheme relies entirely on secrecy of the algorithm (security through obscurity) rather than secrecy of the key. Once the algorithm is known, any encrypted file can be decrypted without any secret.
+- **Low effective key entropy**: The DES key is derived from only 32 bits of independent data (two 16-bit words extracted from the crypto table checksum).  This is well below the 56-bit effective key size of standard DES and far below modern standards.
+- **Static key material in cleartext**: The entire 1024-byte crypto table from which the key is derived is stored in the clear as the first 128 blocks of the payload.  Anyone with knowledge of the key derivation algorithm can compute the key.
+- **Deterministic stream cipher**: The pre-DES XOR layer's keystream is fully determined by the crypto table, which is public.  It adds no additional security beyond the DES layer.
+- **Obfuscation, not encryption**: The security of this scheme relies entirely on secrecy of the algorithm (security through obscurity) rather than secrecy of the key.  Once the algorithm is known, any encrypted file can be decrypted without any secret.
 
 ## 2. Binary File Format
 
-This chapter describes the "Binary File" encryption format, a two-layer XOR stream cipher unrelated to the DES-based scheme in [Chapter 1](#1-text-based-des-format). The substitution table and key validation table referenced below are fixed constants extracted from the LTspice binary; see [Appendix A](#appendix-a-binary-file-key-validation-table) and [Appendix B](#appendix-b-binary-file-substitution-table) for the full data.
+This chapter describes the "Binary File" encryption format, a two-layer XOR stream cipher unrelated to the DES-based scheme in [Chapter 1](#1-text-based-des-format).  The substitution table and key validation table referenced below are fixed constants extracted from the LTspice binary; see [Appendix A](#appendix-a-binary-file-key-validation-table) and [Appendix B](#appendix-b-binary-file-substitution-table) for the full data.
 
 ### 2.1 File Structure
 
@@ -343,7 +343,7 @@ A Binary File is identified by a 20-byte signature and has the following layout:
 | 24 | 4 | `key2` (unsigned 32-bit little-endian integer) |
 | 28 | Variable | Encrypted body (byte stream) |
 
-The signature in hex is `0D 0A 3C 42 69 6E 61 72 79 20 46 69 6C 65 3E 0D 0A 0D 0A 1A`. The trailing `0x1A` (ASCII SUB / Ctrl-Z) causes legacy programs that treat it as an end-of-file marker to stop reading, preventing the binary body from being displayed as garbled text.
+The signature in hex is `0D 0A 3C 42 69 6E 61 72 79 20 46 69 6C 65 3E 0D 0A 0D 0A 1A`.  The trailing `0x1A` (ASCII SUB / Ctrl-Z) causes legacy programs that treat it as an end-of-file marker to stop reading, preventing the binary body from being displayed as garbled text.
 
 ### 2.2 Key Derivation
 
@@ -357,7 +357,7 @@ A check value is computed:
 check = key1 XOR key2
 ```
 
-This check value is looked up in a fixed 100-entry validation table (see [Appendix A](#appendix-a-binary-file-key-validation-table)). Each entry maps a 32-bit check value to a 32-bit base value used as the starting index into the substitution table. If the check value is not found in the table, the file cannot be decrypted (the key pair is unrecognized).
+This check value is looked up in a fixed 100-entry validation table (see [Appendix A](#appendix-a-binary-file-key-validation-table)).  Each entry maps a 32-bit check value to a 32-bit base value used as the starting index into the substitution table.  If the check value is not found in the table, the file cannot be decrypted (the key pair is unrecognized).
 
 #### 2.2.2 Step Value Selection
 
@@ -377,11 +377,11 @@ The step value is selected from a 26-entry table indexed by `key2 mod 26`:
 
 Entry 0 is 1; entries 1 through 25 are the first 25 prime numbers.
 
-The substitution table modulus is 2593, which is itself prime. Since every step value in the table is coprime to 2593 (each is either 1 or a prime less than 2593), the linear congruential index sequence `(base + step × N) mod 2593` is guaranteed to have full period -- all 2593 table entries are visited exactly once before the sequence repeats.
+The substitution table modulus is 2593, which is itself prime.  Since every step value in the table is coprime to 2593 (each is either 1 or a prime less than 2593), the linear congruential index sequence `(base + step × N) mod 2593` is guaranteed to have full period — all 2593 table entries are visited exactly once before the sequence repeats.
 
 ### 2.3 Decryption
 
-Each byte of the encrypted body (from offset 28 onward) is decrypted independently. For body byte at index `N` (0-based):
+Each byte of the encrypted body (from offset 28 onward) is decrypted independently.  For body byte at index `N` (0-based):
 
 ```
 decrypted[N] = encrypted[N] XOR key2_bytes[N mod 4] XOR sbox[(base + step × N) mod 2593]
@@ -395,13 +395,13 @@ where:
 
 The two XOR layers are:
 
-1. **Cyclic key XOR**: Each byte is XOR'd with one of the 4 bytes of `key2`, cycling every 4 bytes. This is equivalent to repeating the `key2` value as a 4-byte mask across the entire body.
+1. **Cyclic key XOR**: Each byte is XOR'd with one of the 4 bytes of `key2`, cycling every 4 bytes.  This is equivalent to repeating the `key2` value as a 4-byte mask across the entire body.
 
-2. **S-box keystream XOR**: Each byte is XOR'd with a value from the 2593-byte substitution table. The index into this table advances linearly: starting at `base`, incrementing by `step` each byte, modulo 2593. The full-period property of this sequence (see [Section 2.2.2](#222-step-value-selection)) means the keystream repeats only after 2593 bytes.
+2. **S-box keystream XOR**: Each byte is XOR'd with a value from the 2593-byte substitution table.  The index into this table advances linearly: starting at `base`, incrementing by `step` each byte, modulo 2593.  The full-period property of this sequence (see [Section 2.2.2](#222-step-value-selection)) means the keystream repeats only after 2593 bytes.
 
 Both layers commute (XOR is associative and commutative), so they can be applied in either order or combined into a single pass.
 
-> **Note on index arithmetic**: The index expression `base + step × N` is computed using 32-bit unsigned arithmetic. For files exceeding approximately 42 MB (with step=97), the multiplication wraps modulo 2^32, producing a different index sequence than the mathematical formula. Encrypted files in practice are well below this threshold.
+> **Note on index arithmetic**: The index expression `base + step × N` is computed using 32-bit unsigned arithmetic.  For files exceeding approximately 42 MB (with step=97), the multiplication wraps modulo 2^32, producing a different index sequence than the mathematical formula.  Encrypted files in practice are well below this threshold.
 
 ### 2.4 Integrity Verification
 
@@ -418,24 +418,24 @@ for i, byte in enumerate(decrypted):
     rotate_hash = (rotate_hash + rotated) mod 2^32
 ```
 
-where `rotate_left_32(value, shift)` performs a 32-bit left rotation. When `shift` is 0, the byte value is added directly without rotation.
+where `rotate_left_32(value, shift)` performs a 32-bit left rotation.  When `shift` is 0, the byte value is added directly without rotation.
 
-Unlike the text-based format ([Section 1.6](#16-integrity-verification)), the Binary File format does not embed expected checksum values in the file. The computed values are available for external validation only.
+Unlike the text-based format ([Section 1.6](#16-integrity-verification)), the Binary File format does not embed expected checksum values in the file.  The computed values are available for external validation only.
 
 ### 2.5 Security Assessment
 
 From a cryptographic perspective:
 
-- **XOR-only cipher**: The entire scheme consists of XOR operations with a deterministic keystream. There is no block cipher or nonlinear transformation applied to the plaintext.
-- **Static, embedded key material**: Both the substitution table and the key validation table are fixed constants embedded in the LTspice binary. The per-file keys (`key1`, `key2`) are stored in the clear in the file header.
-- **Extremely small keyspace**: With only 100 valid check values in the key table and 26 possible step values, there are at most 2,600 distinct decryption configurations. Exhaustive search is trivial even without knowledge of the algorithm.
-- **Fully deterministic**: Given the header fields, the entire keystream is determined. No external secret is required for decryption.
+- **XOR-only cipher**: The entire scheme consists of XOR operations with a deterministic keystream.  There is no block cipher or nonlinear transformation applied to the plaintext.
+- **Static, embedded key material**: Both the substitution table and the key validation table are fixed constants embedded in the LTspice binary.  The per-file keys (`key1`, `key2`) are stored in the clear in the file header.
+- **Extremely small keyspace**: With only 100 valid check values in the key table and 26 possible step values, there are at most 2,600 distinct decryption configurations.  Exhaustive search is trivial even without knowledge of the algorithm.
+- **Fully deterministic**: Given the header fields, the entire keystream is determined.  No external secret is required for decryption.
 
 ## Appendix A: Binary File Key Validation Table
 
-The key validation table contains 100 entries. Each entry is an 8-byte record consisting of a 32-bit check value followed by a 32-bit base value, both in little-endian byte order. The check value is matched against `key1 XOR key2` from the file header; the corresponding base value provides the starting index into the substitution table.
+The key validation table contains 100 entries.  Each entry is an 8-byte record consisting of a 32-bit check value followed by a 32-bit base value, both in little-endian byte order.  The check value is matched against `key1 XOR key2` from the file header; the corresponding base value provides the starting index into the substitution table.
 
-The table is presented below as raw hexadecimal bytes, 32 bytes (4 entries) per line. Whitespace is for readability only.
+The table is presented below as raw hexadecimal bytes, 32 bytes (4 entries) per line.  Whitespace is for readability only.
 
 ```
 c0bc4523 64070000 8e725b71 1e060000 96313950 0c060000 fe701206 5c060000
@@ -469,7 +469,7 @@ To parse entry `i` (0-based), read 8 bytes at offset `i × 8`: the first 4 bytes
 
 ## Appendix B: Binary File Substitution Table
 
-The substitution table is a fixed array of 2593 bytes, indexed by `(base + step × N) mod 2593` during decryption (see [Section 2.3](#23-decryption)). The complete table is presented below as raw hexadecimal bytes. Line breaks are for readability only.
+The substitution table is a fixed array of 2593 bytes, indexed by `(base + step × N) mod 2593` during decryption (see [Section 2.3](#23-decryption)).  The complete table is presented below as raw hexadecimal bytes.  Line breaks are for readability only.
 
 ```
 d55f931826290d5b2961bf26ee61590a58e7b22742b9265466c72f56013d5800

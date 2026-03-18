@@ -43,7 +43,7 @@ def _recover_key(args):
 
     try:
         if args.verbose:
-            print("PSpice Mode 4 key recovery (Rust/AES-NI)", file=sys.stderr)
+            print("PSpice® Mode 4 key recovery (Rust/AES-NI)", file=sys.stderr)
 
         result = recover_mode4_key(args.input_file)
     except FileNotFoundError:
@@ -98,7 +98,7 @@ def main():
     parser.add_argument(
         "--recover-key",
         action="store_true",
-        help="Recover the Mode 4 user encryption key via brute-force attack",
+        help="Recover the PSpice Mode 4 user encryption key via brute-force attack",
     )
 
     verbosity = parser.add_mutually_exclusive_group()

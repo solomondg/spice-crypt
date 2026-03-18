@@ -7,7 +7,7 @@ Top-level decryption dispatch.
 
 This module provides the public :func:`decrypt` and :func:`decrypt_stream`
 convenience functions which auto-detect the encryption format (LTspice
-text-based, LTspice Binary File, or PSpice) and delegate to the
+text-based, LTspice® Binary File, or PSpice®) and delegate to the
 appropriate parser.
 """
 

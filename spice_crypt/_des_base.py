@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 """
-Base DES engine shared by LTspice and PSpice DES variants.
+Base DES engine shared by LTspice® and PSpice® DES variants.
 
 This module provides :class:`DESBase`, a parameterized DES implementation
 whose permutation tables, S-boxes, and behavioral flags are set by

@@ -1,9 +1,9 @@
-# SPDX-FileCopyrightText: © 2025-2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
+# SPDX-FileCopyrightText: © 2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 """
-Decryption support for PSpice encrypted model files.
+Decryption support for PSpice® encrypted model files.
 
 PSpice files are plain-text SPICE netlists with selected ``.SUBCKT``
 and ``.MODEL`` blocks replaced by hex-encoded ciphertext between
@@ -11,7 +11,7 @@ and ``.MODEL`` blocks replaced by hex-encoded ciphertext between
 modes are supported (0-5), spanning DES (modes 0-2) and AES-256 ECB
 (modes 3-5).
 
-See ``.claude/plans/pspice-encryption.md`` for the full specification.
+See ``SPECIFICATIONS/pspice.md`` for the full specification.
 """
 
 from __future__ import annotations
@@ -24,8 +24,6 @@ if TYPE_CHECKING:
     import os
     from collections.abc import Generator
 
-# Sentinel bytes in each 64-byte encrypted block
-_BLOCK_MARKER = b"\x24\x2b"  # '$+' at bytes 62-63
 _PAD_SENTINEL = b" $jbs$"
 
 
@@ -61,12 +59,9 @@ def _decrypt_64_block(cipher, mode: int, data: bytes) -> bytes:
 def _extract_plaintext(block: bytes) -> bytes:
     """Extract the plaintext content from a decrypted 64-byte block.
 
-    - Bytes 62-63 are the ``$+`` block marker (validation sentinel).
-    - The content before position 62 may end with the `` $jbs$`` padding
-      sentinel followed by random fill.  If found, content is truncated
-      at the sentinel.
+    The content occupies bytes 0-61.  If the `` $jbs$`` padding sentinel
+    is present, content is truncated at the sentinel.
     """
-    # Content is in bytes 0-61 (bytes 62-63 are the $+ marker)
     content = block[:62]
     idx = content.find(_PAD_SENTINEL)
     if idx >= 0:

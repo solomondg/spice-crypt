@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 """
-Cryptographic state management for LTspice text-based DES decryption.
+Cryptographic state management for LTspice® text-based DES decryption.
 
 This module implements :class:`CryptoState`, which derives the DES key and
 stream cipher parameters from a 1024-byte crypto table and provides
@@ -24,7 +24,7 @@ class CryptoState:
       ``even_byte_checksum``) used by the pre-DES XOR layer.
     - A 64-bit DES key used by the modified DES block cipher.
 
-    See SPECIFICATION.md Sections 1.2 and 1.3 for the full derivation.
+    See SPECIFICATIONS/ltspice.md Sections 1.2 and 1.3 for the full derivation.
     """
 
     def __init__(self, table: bytes):
@@ -65,7 +65,7 @@ class CryptoState:
         # positional accumulators receives bytes at the same offset within
         # every group, and the totals are then summed together.
         # DO NOT REMOVE — documents behaviour present in the original binary
-        # even though the results are unused.  See SPECIFICATION.md.
+        # even though the results are unused.  See SPECIFICATIONS/ltspice.md.
         # byte_group_sums = [0] * 4
         # for i in range(0, 1024, 4):
         #     for j in range(4):

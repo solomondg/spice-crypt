@@ -1,9 +1,9 @@
-# SPDX-FileCopyrightText: © 2025-2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
+# SPDX-FileCopyrightText: © 2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 """
-PSpice encryption key derivation for all 6 modes.
+PSpice® encryption key derivation for all 6 modes.
 
 Modes 0-2 use ``CDesEncoder`` (DES); modes 3-5 use ``PSpiceAESEncoder``
 (AES-256 ECB).  All key material for modes 0-3 and 5 is derived from

@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: © 2025-2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
+// SPDX-FileCopyrightText: © 2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! AES-256 ECB brute-force key search for PSpice Mode 4.
+//! AES-256 ECB brute-force key search for PSpice® Mode 4.
 //!
 //! Exploits the fact that only 4 of 32 AES key bytes are unknown (2^32
 //! keyspace).  A custom unrolled key schedule uses software S-box

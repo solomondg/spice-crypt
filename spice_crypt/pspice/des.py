@@ -1,16 +1,16 @@
-# SPDX-FileCopyrightText: © 2025-2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
+# SPDX-FileCopyrightText: © 2026 Joe T. Sylve, Ph.D. <joe.sylve@gmail.com>
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 """
-PSpice DES variant implementation.
+PSpice® DES variant implementation.
 
 This module implements the custom DES block cipher used by Cadence PSpice
 (``CDesEncoder``) for encryption modes 0-2.  It deviates from standard
 DES (FIPS 46-3) in its PC-1, PC-2, IP, FP tables and S-boxes, while
 retaining standard Expansion, P-box, and rotation schedule.
 
-See ``.claude/plans/pspice-encryption.md`` Section 6 for full details.
+See ``SPECIFICATIONS/pspice.md`` Section 4 for full details.
 """
 
 from spice_crypt._constants import MASK64
@@ -20,7 +20,7 @@ from spice_crypt._des_base import DESBase
 class PSpiceDES(DESBase):
     """PSpice DES variant (``CDesEncoder``).
 
-    Uses standard DES structure (left-rotation, no half-swaps, full
+    Uses standard DES structure (right-rotation, no half-swaps, full
     64-bit output) with custom PC-1, PC-2, IP, FP tables and S-boxes.
     """
 
