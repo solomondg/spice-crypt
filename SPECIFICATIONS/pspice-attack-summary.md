@@ -22,15 +22,15 @@ Byte  8:    0x00 (null terminator)       -- known
 Byte  9–31: 0x00 (zero padding)          -- known
 ```
 
-`EncryptionContext_init` (`0x140008540`) calls `initEncryptionKeys` to derive both keys, then passes only `g_desKey` to the cipher engine via a vtable call at `0x14000871F`:
+`EncryptionContext_init` calls `initEncryptionKeys` to derive both keys, then passes only `g_desKey` to the cipher engine via a vtable call:
 
 ```
-lea     rdx, g_desKey           ; 0x1400085F5 -- short key loaded as setKey argument
+lea     rdx, g_desKey           ; short key loaded as setKey argument
 ...
-call    qword ptr [rax]         ; 0x14000871F -- vtable[0]: setKey(&g_desKey)
+call    qword ptr [rax]         ; vtable[0]: setKey(&g_desKey)
 ```
 
-`PSpiceAESEncoder_setKey` (`0x140012E00`) copies this null-terminated string into a zero-filled 32-byte local buffer and calls `AES_keyExpansion(self+8, keyBuf, 256)`.  `g_desKey` in mode 4 is 8 characters (4 XOR'd bytes + `"1002"`) followed by a null terminator, so bytes 9–31 of the AES key are always zero.
+`PSpiceAESEncoder_setKey` copies this null-terminated string into a zero-filled 32-byte local buffer and calls `AES_keyExpansion(self+8, keyBuf, 256)`.  `g_desKey` in mode 4 is 8 characters (4 XOR'd bytes + `"1002"`) followed by a null terminator, so bytes 9–31 of the AES key are always zero.
 
 Since 28 of 32 key bytes are known, the effective keyspace shrinks from 2^256 to 2^32.
 
