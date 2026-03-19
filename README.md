@@ -192,6 +192,14 @@ This type of reverse engineering for interoperability is specifically permitted 
 - **United States**: [17 U.S.C. § 1201(f)](https://www.law.cornell.edu/uscode/text/17/1201) permits circumvention of technological protection measures for the sole purpose of achieving interoperability between independently created programs.  Section 1201(f)(2) explicitly allows distributing the tools developed for this purpose to others seeking interoperability.  Additionally, [§ 1201(g)](https://www.law.cornell.edu/uscode/text/17/1201) permits circumvention when conducted in good-faith encryption research — studying the flaws and vulnerabilities of encryption technologies — and allows dissemination of the research findings.
 - **European Union**: [Article 6 of the Software Directive (2009/24/EC)](https://eur-lex.europa.eu/eli/dir/2009/24/oj) permits decompilation and reverse engineering when it is indispensable to achieve interoperability with independently created programs.  Article 6(3) provides that this right cannot be overridden by contract.
 
+### Disclaimer
+
+The legal justifications above pertain to the underlying research, technical analysis, and release of SpiceCrypt itself.  They are provided to demonstrate that this work was conducted in good faith and to outline its intended purpose.  They should not be construed as legal advice.
+
+Encrypted SPICE models are often distributed under license agreements or terms of service that end users may have accepted.  It is the end user's responsibility to ensure that their use of SpiceCrypt does not violate any such agreements or any applicable laws in their jurisdiction.
+
+SpiceCrypt is intended solely for enabling simulator interoperability with lawfully obtained models.  Using it to violate intellectual property rights is immoral and is not an acceptable use of the tool.
+
 ## Research Contributors
 
 - **Joe T. Sylve, Ph.D.** — Reverse engineering and documentation of the LTspice text-based DES encryption format and PSpice encryption modes.
