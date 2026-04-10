@@ -31,11 +31,11 @@ repos:
   - repo: local
     hooks:
       - id: check-version
-        name: check version consistency
+        name: check dev-status classifier matches version
         entry: uv run python -B scripts/check_version.py
         language: system
         pass_filenames: false
-        files: (pyproject\.toml|spice_crypt/__init__\.py)
+        files: pyproject\.toml
 
       - id: pytest
         name: pytest

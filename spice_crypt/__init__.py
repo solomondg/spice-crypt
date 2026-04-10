@@ -6,7 +6,7 @@
 SpiceCrypt - A library for decrypting LTspice® and PSpice® encrypted files
 """
 
-__version__ = "2.0.2"
+from importlib.metadata import version
 
 from spice_crypt.decrypt import decrypt, decrypt_stream
 from spice_crypt.ltspice.binary_file import BinaryFileParser
@@ -15,6 +15,8 @@ from spice_crypt.ltspice.decrypt import LTspiceFileParser
 from spice_crypt.ltspice.des import LTspiceDES
 from spice_crypt.pspice.decrypt import PSpiceFileParser
 from spice_crypt.pspice.des import PSpiceDES
+
+__version__ = version("spice-crypt")
 
 __all__ = [
     "BinaryFileParser",

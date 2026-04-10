@@ -2,14 +2,11 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-"""Pre-commit hook: verify version and classifier consistency.
+"""Pre-commit hook: verify Development Status classifier matches version stability.
 
-Checks:
-1. pyproject.toml [project].version == spice_crypt/__init__.py __version__
-2. Development Status classifier matches version stability:
-   - 0.x (initial development) → "Development Status :: 3 - Alpha"
-   - Pre-release (rc/alpha/beta/dev) → "Development Status :: 4 - Beta"
-   - Stable release (≥1.0) → "Development Status :: 5 - Production/Stable"
+- 0.x (initial development) → "Development Status :: 3 - Alpha"
+- Pre-release (rc/alpha/beta/dev) → "Development Status :: 4 - Beta"
+- Stable release (≥1.0) → "Development Status :: 5 - Production/Stable"
 """
 
 from __future__ import annotations
@@ -22,7 +19,6 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = ROOT / "pyproject.toml"
-INIT = ROOT / "spice_crypt" / "__init__.py"
 
 PRE_RELEASE_RE = re.compile(r"(a|alpha|b|beta|rc|dev)\d*", re.IGNORECASE)
 
@@ -33,17 +29,7 @@ CLASSIFIER_STABLE = "Development Status :: 5 - Production/Stable"
 _DEV_STATUS_PREFIX = "Development Status ::"
 
 
-def _extract_init_version() -> str:
-    for line in INIT.read_text().splitlines():
-        m = re.match(r'^__version__\s*=\s*"(.+)"', line)
-        if m:
-            return m.group(1)
-    sys.exit(f"error: could not find __version__ in {INIT}")
-
-
 def main() -> int:
-    errors: list[str] = []
-
     with PYPROJECT.open("rb") as f:
         pyproject = tomllib.load(f)
 
@@ -58,13 +44,6 @@ def main() -> int:
         (c for c in classifiers if c.startswith(_DEV_STATUS_PREFIX)), None
     )
 
-    init_ver = _extract_init_version()
-
-    if pyproject_ver != init_ver:
-        errors.append(
-            f"Version mismatch: pyproject.toml has {pyproject_ver!r}, __init__.py has {init_ver!r}"
-        )
-
     major = int(pyproject_ver.split(".")[0])
     is_prerelease = bool(PRE_RELEASE_RE.search(pyproject_ver))
 
@@ -76,16 +55,14 @@ def main() -> int:
         expected_classifier = CLASSIFIER_STABLE
 
     if actual_classifier is None:
-        errors.append("No 'Development Status' classifier found in pyproject.toml")
-    elif actual_classifier != expected_classifier:
-        errors.append(
-            f"Classifier mismatch for version {pyproject_ver!r}: "
-            f"expected {expected_classifier!r}, found {actual_classifier!r}"
+        print("error: No 'Development Status' classifier found in pyproject.toml", file=sys.stderr)
+        return 1
+    if actual_classifier != expected_classifier:
+        print(
+            f"error: Classifier mismatch for version {pyproject_ver!r}: "
+            f"expected {expected_classifier!r}, found {actual_classifier!r}",
+            file=sys.stderr,
         )
-
-    if errors:
-        for e in errors:
-            print(f"error: {e}", file=sys.stderr)
         return 1
 
     return 0
