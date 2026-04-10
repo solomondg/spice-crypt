@@ -13,9 +13,10 @@ path = "spice_crypt/pspice/_aes_brute.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.28", features = ["abi3-py310", "generate-import-lib"] }
+pyo3 = { version = "0.28", features = ["abi3-py310"] }
 rayon = "1"
-cpufeatures = "0.3"
+cpufeatures = "0.2"
+
 
 [profile.release]
 codegen-units = 1
