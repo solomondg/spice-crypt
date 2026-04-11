@@ -17,6 +17,16 @@ pyo3 = { version = "0.28", features = ["abi3-py310"] }
 rayon = "1"
 cpufeatures = "0.2"
 
+# Windows cross-compile workaround: maturin 1.13 requires pyo3's
+# `generate-import-lib` feature to build for Windows without a matching-arch
+# Python interpreter on the host. The feature is a no-op on non-Windows
+# targets, but scoping it keeps the extra `python3-dll-a` dep out of Linux
+# and macOS builds. pyo3 main has deprecated this feature in favor of
+# raw-dylib linking — revisit once that ships in a pyo3 release and maturin
+# drops the stale interpreter-presence check.
+[target.'cfg(windows)'.dependencies]
+pyo3 = { version = "0.28", features = ["generate-import-lib"] }
+
 
 [profile.release]
 codegen-units = 1
