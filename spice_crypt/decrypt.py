@@ -59,8 +59,14 @@ def _try_pspice_format(file_obj, user_key=None):
     return None
 
 
-def _run_decrypt_generator(gen, output_file, stack):
+def _run_decrypt_generator(gen, output_file, stack, line_ending=None):
     """Drive a parser's ``decrypt_stream`` generator, writing output.
+
+    When *line_ending* is ``None``, chunks are written verbatim (current
+    parser output).  Otherwise every ``\\n`` in each chunk is replaced with
+    *line_ending* (bytes); a 1-byte lookbehind for ``\\r`` handles ``\\r\\n``
+    sequences that straddle chunk boundaries (relevant for LTspice text-DES
+    output which yields 4 bytes at a time).
 
     Returns ``(content, verification)`` in the same form as
     :func:`decrypt_stream`.
@@ -71,21 +77,43 @@ def _run_decrypt_generator(gen, output_file, stack):
     elif isinstance(output_file, str):
         output_file = stack.enter_context(open(output_file, "wb"))  # noqa: SIM115
 
+    def _write(chunk):
+        if return_string:
+            buffer.write(chunk.decode("utf-8", errors="replace"))
+        else:
+            output_file.write(chunk)
+
+    def _transform(chunk):
+        return chunk.replace(b"\r\n", b"\n").replace(b"\n", line_ending)
+
+    leftover = b""
     try:
         while True:
             chunk = next(gen)
-            if return_string:
-                buffer.write(chunk.decode("utf-8", errors="replace"))
+            if line_ending is None:
+                _write(chunk)
+                continue
+            combined = leftover + chunk
+            # Hold a trailing \r — it may be the leading half of a \r\n
+            # split across chunks.
+            if combined.endswith(b"\r"):
+                leftover = b"\r"
+                combined = combined[:-1]
             else:
-                output_file.write(chunk)
+                leftover = b""
+            _write(_transform(combined))
     except StopIteration as e:
         verification = e.value or (0, 0)
+
+    if leftover:
+        # Standalone trailing \r — neither replace() touches it; pass through.
+        _write(leftover)
 
     return (buffer.getvalue() if return_string else None), verification
 
 
 def decrypt_stream(
-    input_file, output_file=None, is_ltspice_file=None, user_key=None
+    input_file, output_file=None, is_ltspice_file=None, user_key=None, line_ending=None
 ) -> tuple[str | None, tuple[int, int]]:
     """
     Stream decrypt data from input_file to output_file.
@@ -100,6 +128,13 @@ def decrypt_stream(
         is_ltspice_file: Boolean indicating if file is in LTspice format
                          If None, auto-detect based on content
         user_key: Optional user key bytes for PSpice Mode 4 decryption
+        line_ending: Optional bytes to use for line terminators.  ``None``
+                     (default) preserves parser output verbatim.  Pass
+                     ``b"\\n"`` to force LF, ``b"\\r\\n"`` to force CRLF, or
+                     ``os.linesep.encode()`` for platform-native.  Any
+                     ``\\r\\n`` sequences in the stream are first normalised
+                     to ``\\n`` before conversion, so the transform is
+                     idempotent across mixed-ending sources.
 
     Returns:
         tuple: (content, verification)
@@ -114,7 +149,9 @@ def decrypt_stream(
                 raw = stack.enter_context(open(input_file, "rb"))
                 parser = _try_binary_file(raw)
                 if parser is not None:
-                    return _run_decrypt_generator(parser.decrypt_stream(), output_file, stack)
+                    return _run_decrypt_generator(
+                        parser.decrypt_stream(), output_file, stack, line_ending
+                    )
                 # Not a Binary File -- wrap the already-open handle as text
                 # (_try_binary_file already restored the stream position)
                 input_file = stack.enter_context(
@@ -134,7 +171,9 @@ def decrypt_stream(
         ):
             parser = _try_binary_file(input_file)
             if parser is not None:
-                return _run_decrypt_generator(parser.decrypt_stream(), output_file, stack)
+                return _run_decrypt_generator(
+                    parser.decrypt_stream(), output_file, stack, line_ending
+                )
             # Not a Binary File -- wrap the binary handle as text so the
             # text-based detection and LTspiceFileParser receive strings.
             input_file = stack.enter_context(
@@ -145,7 +184,9 @@ def decrypt_stream(
         if is_ltspice_file is None and hasattr(input_file, "seek"):
             parser = _try_pspice_format(input_file, user_key=user_key)
             if parser is not None:
-                return _run_decrypt_generator(parser.decrypt_stream(), output_file, stack)
+                return _run_decrypt_generator(
+                    parser.decrypt_stream(), output_file, stack, line_ending
+                )
 
         # Auto-detect if file is in LTspice format if not specified
         if is_ltspice_file is None:
@@ -154,7 +195,7 @@ def decrypt_stream(
         # Create parser
         parser = LTspiceFileParser(input_file, raw_mode=not is_ltspice_file)
 
-        return _run_decrypt_generator(parser.decrypt_stream(), output_file, stack)
+        return _run_decrypt_generator(parser.decrypt_stream(), output_file, stack, line_ending)
 
 
 def decrypt(data, is_ltspice_file=None):

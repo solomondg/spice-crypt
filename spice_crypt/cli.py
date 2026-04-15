@@ -9,11 +9,19 @@ Command-line interface for SpiceCrypt
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
 from spice_crypt import __version__
 from spice_crypt.decrypt import decrypt_stream
+
+_LINE_ENDINGS = {
+    "preserve": None,
+    "lf": b"\n",
+    "crlf": b"\r\n",
+    "native": os.linesep.encode("ascii"),
+}
 
 
 def _recover_key(args):
@@ -77,6 +85,15 @@ def main():
         action="store_true",
         help="Recover the PSpice Mode 4 user encryption key via brute-force attack",
     )
+    parser.add_argument(
+        "--line-ending",
+        choices=list(_LINE_ENDINGS),
+        default="preserve",
+        help=(
+            "Output line terminator: 'preserve' (default, pass parser output through), "
+            "'lf', 'crlf', or 'native' (platform default)"
+        ),
+    )
 
     verbosity = parser.add_mutually_exclusive_group()
     verbosity.add_argument("--verbose", action="store_true", help="Display additional information")
@@ -113,7 +130,11 @@ def main():
         is_ltspice = False if args.raw else None
         user_key = args.user_key.encode("ascii") if args.user_key else None
         _, verification = decrypt_stream(
-            args.input_file, output_dest, is_ltspice_file=is_ltspice, user_key=user_key
+            args.input_file,
+            output_dest,
+            is_ltspice_file=is_ltspice,
+            user_key=user_key,
+            line_ending=_LINE_ENDINGS[args.line_ending],
         )
         if args.verbose:
             if args.output:

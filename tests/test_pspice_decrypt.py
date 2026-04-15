@@ -234,3 +234,30 @@ class TestContinuationAndCRLF:
         content, continues = _extract_plaintext(block_end)
         assert content == b"hello"
         assert continues is False
+
+    def test_line_ending_crlf(self, tmp_path):
+        """--line-ending crlf (via line_ending=b'\\r\\n') produces CRLF output."""
+        lib = self._build_lib(tmp_path)
+        out = tmp_path / "out.lib"
+        decrypt_stream(str(lib), str(out), line_ending=b"\r\n")
+        data = out.read_bytes()
+        # Encrypted-body lines (and the preamble) all use CRLF.
+        assert b".SUBCKT X_LONG NODE_A NODE_B NODE_C NODE_D NODE_E NODE_F NODE_G\r\n" in data
+        assert b"  PARAMS: X=1\r\n" in data
+        # No bare LFs, no bare CRs (every \n is paired, every \r is paired).
+        assert data.count(b"\n") == data.count(b"\r\n")
+        assert data.count(b"\r") == data.count(b"\r\n")
+
+    def test_line_ending_lf(self, tmp_path):
+        """line_ending=b'\\n' normalises any CRLF in input to LF."""
+        lib = self._build_lib(tmp_path)
+        content, _ = decrypt_stream(str(lib), line_ending=b"\n")
+        assert "\r" not in content
+        assert ".SUBCKT X_LONG NODE_A NODE_B NODE_C NODE_D NODE_E NODE_F NODE_G\n" in content
+
+    def test_line_ending_preserves_by_default(self, tmp_path):
+        """line_ending=None is the documented no-op default."""
+        lib = self._build_lib(tmp_path)
+        default_content, _ = decrypt_stream(str(lib))
+        explicit_content, _ = decrypt_stream(str(lib), line_ending=None)
+        assert default_content == explicit_content
