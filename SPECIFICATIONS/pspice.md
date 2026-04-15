@@ -83,7 +83,7 @@ All six modes operate on **64-byte blocks**.  Each 64-byte block has the followi
 | Byte range | Size | Content |
 |-----------|------|---------|
 | 0–61 | 62 bytes | Payload (plaintext content + padding) |
-| 62–63 | 2 bytes | Unused (written as `0x24 0x2B` by the encoder, not checked during decryption) |
+| 62–63 | 2 bytes | Continuation flag: `0x24 0x2B` (`$+`) signals that the next block's payload continues this block verbatim (see [Section 2.4](#24-line-continuation)).  Any other value means the block terminates its logical line; observed non-continuation values include `$\0`, `\r\0`, and padding-fill letters. |
 
 ### 2.1 Header Block
 
@@ -99,7 +99,7 @@ During decryption, the header block is decrypted and validated: the known prefix
 
 ### 2.2 Content Blocks
 
-After the header block, each subsequent encrypted block carries up to 62 bytes of plaintext content in bytes 0–61.  Bytes 62–63 are not used during decryption.
+After the header block, each subsequent encrypted block carries up to 62 bytes of plaintext content in bytes 0–61.  Bytes 62–63 carry the continuation flag described in [Section 2.4](#24-line-continuation).
 
 ### 2.3 Padding
 
@@ -113,9 +113,17 @@ During decryption, the padding sentinel ` $jbs$` is searched within bytes 0–61
 
 ### 2.4 Line Continuation
 
-PSpice plaintext lines longer than 62 characters are split across multiple blocks using a continuation mechanism.  The first block contains the beginning of the line.  Subsequent continuation blocks begin with the `+` character (ASCII 0x2B), signaling that their content should be appended to the previous line (with the leading `+` stripped).  Lines longer than 124 characters may span three or more blocks.
+PSpice source lines longer than 62 characters are split across multiple blocks.  Two continuation mechanisms coexist:
 
-When a line exceeds 124 characters, the encoder searches for a natural break point (a space or comma) within the first 124 characters and splits there.
+**Tail-marker continuation (byte-limit split).**  When the encoder fills all 62 payload bytes of a block with content from a single source line, it writes `0x24 0x2B` (`$+`) at bytes 62–63 of that block.  The next block's payload (bytes 0–61) begins **mid-content** with no leading marker and is appended to the current logical line verbatim.  Chains of three or more blocks are produced by writing `$+` at the tail of every non-terminal block.
+
+**Leading-`+` continuation (indented-source-line).**  When a source line begins with a `+` (explicit SPICE continuation) or leading whitespace (implicit continuation), the encoder produces a block whose byte 0 is `+` (ASCII 0x2B).  The decoder appends the block's content — with the leading `+` stripped — to the current logical line.
+
+The two mechanisms are mutually exclusive in practice: a block whose tail is `$+` is always followed by a block that does **not** begin with `+`, and vice versa.  Decoders must implement both.
+
+When a line exceeds 124 characters, the encoder searches for a natural break point (a space or comma) within the first 124 characters and splits there; the resulting blocks still use the tail-marker or leading-`+` mechanisms above.
+
+Source-file line terminators (`\r\n` on Windows, `\n` on Unix) are preserved as literal bytes within the block payload.  Decoders targeting a specific platform should normalise these after reassembling logical lines.
 
 
 ## 3. Key Derivation

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 _PAD_SENTINEL = b" $jbs$"
+_TAIL_CONTINUES = b"$+"
 
 
 def _make_cipher(mode: int, short_key: bytes):
@@ -56,18 +57,33 @@ def _decrypt_64_block(cipher, mode: int, data: bytes) -> bytes:
     return bytes(result)
 
 
-def _extract_plaintext(block: bytes) -> bytes:
-    """Extract the plaintext content from a decrypted 64-byte block.
+def _extract_plaintext(block: bytes) -> tuple[bytes, bool]:
+    """Extract plaintext content and the continuation flag from a 64-byte block.
 
-    The content occupies bytes 0-61.  If the `` $jbs$`` padding sentinel
-    is present, content is truncated at the sentinel.
+    Content occupies bytes 0-61, truncated at the `` $jbs$`` padding sentinel
+    if present.  Bytes 62-63 are the continuation flag: ``b"$+"`` means the
+    next block's payload is a verbatim continuation of this one (no leading
+    ``+``); any other value means this block terminates its logical line.
     """
     content = block[:62]
     idx = content.find(_PAD_SENTINEL)
     if idx >= 0:
         content = content[:idx]
-    # Strip trailing null bytes
-    return content.rstrip(b"\x00")
+    return content.rstrip(b"\x00"), block[62:64] == _TAIL_CONTINUES
+
+
+def _emit_lines(buf: bytes):
+    """Split *buf* on embedded ``\\r`` and yield each segment terminated with ``\\n``.
+
+    Source CRLF line boundaries survive the encryption as ``\\r`` bytes within
+    block payloads.  After ``$+`` chains have been reassembled into whole
+    logical lines, splitting on ``\\r`` recovers the original source lines
+    with LF terminators.
+    """
+    if not buf:
+        return
+    for seg in buf.rstrip(b"\r").split(b"\r"):
+        yield seg + b"\n"
 
 
 class PSpiceFileParser:
@@ -111,6 +127,7 @@ class PSpiceFileParser:
             (PSpice files have no verification checksums).
         """
         continuation = b""
+        prev_continues = False
         in_encrypted_block = False
         cipher = None
         mode = 0
@@ -125,6 +142,7 @@ class PSpiceFileParser:
             if stripped.startswith("$CDNENCSTART"):
                 in_encrypted_block = True
                 is_header = True
+                prev_continues = False
                 mode, version_str = mode_from_marker(stripped)
 
                 # Derive keys
@@ -137,10 +155,10 @@ class PSpiceFileParser:
 
             # Check for block end marker
             if stripped.startswith("$CDNENCFINISH"):
-                # Flush any pending continuation line
-                if continuation:
-                    yield continuation + b"\n"
-                    continuation = b""
+                # Flush any pending continuation line(s)
+                yield from _emit_lines(continuation)
+                continuation = b""
+                prev_continues = False
                 in_encrypted_block = False
                 cipher = None
                 continue
@@ -166,24 +184,35 @@ class PSpiceFileParser:
 
             plaintext_block = _decrypt_64_block(cipher, mode, block_data)
 
-            # Skip the encrypted header (first block after marker)
+            # Skip the encrypted header (first block after marker).  The
+            # header's own tail bytes are irrelevant — a fresh logical line
+            # starts with the next block.
             if is_header:
                 is_header = False
+                prev_continues = False
                 continue
 
-            content = _extract_plaintext(plaintext_block)
+            content, continues_next = _extract_plaintext(plaintext_block)
 
-            # Handle continuation lines: if the decrypted content starts
-            # with '+', it's a continuation of the previous line.
-            if content.startswith(b"+"):
+            # Continuation handling.  Two encoder mechanisms coexist and are
+            # mutually exclusive in practice:
+            #   1. Previous block flagged ``$+`` at bytes 62-63: this block's
+            #      payload continues the logical line verbatim (no ``+`` to
+            #      strip).
+            #   2. This block's payload starts with ``+``: SPICE-style
+            #      continuation of an indented source line.
+            if prev_continues:
+                continuation += content
+            elif content.startswith(b"+"):
                 continuation += content[1:]
             else:
-                if continuation:
-                    yield continuation + b"\n"
+                yield from _emit_lines(continuation)
                 continuation = content
 
-        # Flush final continuation
-        if continuation:
-            yield continuation + b"\n"
+            prev_continues = continues_next
+
+        # Flush final continuation (in case the file ends mid-block without
+        # an explicit ``$CDNENCFINISH`` marker).
+        yield from _emit_lines(continuation)
 
         return (0, 0)

@@ -130,3 +130,107 @@ class TestKeyRecovery:
         # raise ValueError indicating no brute-force is needed.
         with pytest.raises(ValueError, match="default Mode 4 keys"):
             recover_mode4_key(DATA_DIR / "mode4.lib")
+
+
+# ---------------------------------------------------------------------------
+# Continuation-marker + CRLF handling
+# ---------------------------------------------------------------------------
+
+
+class TestContinuationAndCRLF:
+    """Exercise the ``$+`` tail continuation marker and embedded CRLF.
+
+    PSpiceEnc uses two continuation mechanisms:
+
+    1. ``+`` at byte 0 of the next block — SPICE-style continuation of an
+       indented next source line.
+    2. ``$+`` at bytes 62-63 of the current block — byte-limit mid-content
+       split; the next block's payload continues the current one verbatim.
+
+    Source lines can also carry embedded ``\\r`` bytes (from Windows CRLF
+    source files).  The fixture here exercises all three behaviours in a
+    single synthesised ``.lib``.
+    """
+
+    _SENTINEL = b" $jbs$"
+    _FILL = b"ADQIRRMGDISLKHOSIMIMCMFREIKFGPCNQQSTKCJGIHLGEMRRNDKG" * 2
+
+    def _padded(self, content: bytes, tail: bytes = b"$\x00") -> bytes:
+        """Build a 64-byte padded block: content + ` $jbs$` + fill + tail."""
+        remaining = 62 - len(content) - len(self._SENTINEL)
+        assert remaining >= 0, f"content too long: {len(content)}"
+        return content + self._SENTINEL + self._FILL[:remaining] + tail
+
+    def _full(self, content: bytes) -> bytes:
+        """Build a 64-byte full block: 62 bytes content + ``$+`` tail."""
+        assert len(content) == 62, f"content must be 62 bytes, got {len(content)}"
+        return content + b"$+"
+
+    def _build_lib(self, tmp_path):
+        """Synthesise a mode-2 encrypted .lib exercising both continuations."""
+        from spice_crypt.pspice.des import PSpiceDES
+        from spice_crypt.pspice.keys import derive_keys
+
+        # Logical source (CRLF throughout):
+        #   .SUBCKT X_LONG NODE_A NODE_B NODE_C NODE_D NODE_E NODE_F NODE_G\r\n
+        #     PARAMS: X=1\r\n                (indented -> SPICE continuation)
+        #   R1 1 2 1k\r\n
+        #   .ends X_LONG\r\n
+        long_line = b".SUBCKT X_LONG NODE_A NODE_B NODE_C NODE_D NODE_E NODE_F NODE_G\r"
+        assert len(long_line) == 64  # >62, forces $+ mid-content split
+
+        blocks = [
+            self._padded(b"0001.0000 MOCKKEY"),  # header (skipped by decoder)
+            self._full(long_line[:62]),  # first 62 bytes + $+ tail
+            self._padded(long_line[62:]),  # "G\r" + padding
+            self._padded(b"+  PARAMS: X=1\r"),  # + prefix = Style A continuation
+            self._padded(b"R1 1 2 1k\r"),  # short CRLF line
+            self._padded(b".ends X_LONG\r"),  # end
+        ]
+
+        short_key, _ = derive_keys(mode=2, version_str="1")
+        cipher = PSpiceDES()
+        cipher.set_key(short_key)
+        enc_hex = [cipher.process_block(b, decrypt=False).hex().upper() for b in blocks]
+
+        lib_text = "\r\n".join(
+            [
+                "**$ENCRYPTED_LIB",
+                "$CDNENCSTART_ADV1",
+                *enc_hex,
+                "$CDNENCFINISH",
+                "",
+            ]
+        )
+        path = tmp_path / "fixture.lib"
+        path.write_text(lib_text)
+        return path
+
+    def test_roundtrip_reconstructs_source_lines(self, tmp_path):
+        lib = self._build_lib(tmp_path)
+        content, _ = decrypt_stream(str(lib))
+        expected = (
+            ".SUBCKT X_LONG NODE_A NODE_B NODE_C NODE_D NODE_E NODE_F NODE_G\n"
+            "  PARAMS: X=1\n"
+            "R1 1 2 1k\n"
+            ".ends X_LONG\n"
+        )
+        assert expected in content
+        # Negative assertions: no mid-word cut, no embedded CR.
+        assert "NODE_\n" not in content
+        assert "\r" not in content
+
+    def test_extract_plaintext_reports_continuation_flag(self):
+        from spice_crypt.pspice.decrypt import _extract_plaintext
+
+        # Full block, $+ tail -> continues_next == True
+        block_cont = b"A" * 62 + b"$+"
+        content, continues = _extract_plaintext(block_cont)
+        assert content == b"A" * 62
+        assert continues is True
+
+        # Padded block, non-$+ tail -> continues_next == False
+        block_end = self._padded(b"hello")
+        content, continues = _extract_plaintext(block_end)
+        assert content == b"hello"
+        assert continues is False
