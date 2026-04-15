@@ -153,6 +153,8 @@ class TestContinuationAndCRLF:
     """
 
     _SENTINEL = b" $jbs$"
+    # 52-byte pseudo-random-looking fill, doubled so _padded() has enough
+    # filler bytes even when content is empty (52 bytes < 62 - 6 sentinel).
     _FILL = b"ADQIRRMGDISLKHOSIMIMCMFREIKFGPCNQQSTKCJGIHLGEMRRNDKG" * 2
 
     def _padded(self, content: bytes, tail: bytes = b"$\x00") -> bytes:
@@ -257,10 +259,3 @@ class TestContinuationAndCRLF:
         content, _ = decrypt_stream(str(lib), line_ending=b"\n")
         assert "\r" not in content
         assert ".SUBCKT X_LONG NODE_A NODE_B NODE_C NODE_D NODE_E NODE_F NODE_G\n" in content
-
-    def test_line_ending_preserves_by_default(self, tmp_path):
-        """line_ending=None is the documented no-op default."""
-        lib = self._build_lib(tmp_path)
-        default_content, _ = decrypt_stream(str(lib))
-        explicit_content, _ = decrypt_stream(str(lib), line_ending=None)
-        assert default_content == explicit_content

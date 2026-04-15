@@ -59,14 +59,28 @@ def _try_pspice_format(file_obj, user_key=None):
     return None
 
 
+def _apply_line_ending(chunk: bytes, leftover: bytes, line_ending: bytes) -> tuple[bytes, bytes]:
+    """Rewrite line terminators in *chunk* to *line_ending*.
+
+    Any ``\\r\\n`` is first normalised to ``\\n`` so the transform is
+    idempotent across mixed-ending input.  A trailing ``\\r`` is held back
+    in the returned *leftover* to cover ``\\r\\n`` sequences split across
+    chunk boundaries (relevant for parsers that yield small chunks).
+    """
+    combined = leftover + chunk
+    if combined.endswith(b"\r"):
+        combined = combined[:-1]
+        new_leftover = b"\r"
+    else:
+        new_leftover = b""
+    return combined.replace(b"\r\n", b"\n").replace(b"\n", line_ending), new_leftover
+
+
 def _run_decrypt_generator(gen, output_file, stack, line_ending=None):
     """Drive a parser's ``decrypt_stream`` generator, writing output.
 
-    When *line_ending* is ``None``, chunks are written verbatim (current
-    parser output).  Otherwise every ``\\n`` in each chunk is replaced with
-    *line_ending* (bytes); a 1-byte lookbehind for ``\\r`` handles ``\\r\\n``
-    sequences that straddle chunk boundaries (relevant for LTspice text-DES
-    output which yields 4 bytes at a time).
+    When *line_ending* is ``None``, chunks are written verbatim.  Otherwise
+    each chunk is passed through :func:`_apply_line_ending`.
 
     Returns ``(content, verification)`` in the same form as
     :func:`decrypt_stream`.
@@ -77,37 +91,25 @@ def _run_decrypt_generator(gen, output_file, stack, line_ending=None):
     elif isinstance(output_file, str):
         output_file = stack.enter_context(open(output_file, "wb"))  # noqa: SIM115
 
-    def _write(chunk):
-        if return_string:
-            buffer.write(chunk.decode("utf-8", errors="replace"))
-        else:
-            output_file.write(chunk)
-
-    def _transform(chunk):
-        return chunk.replace(b"\r\n", b"\n").replace(b"\n", line_ending)
-
     leftover = b""
     try:
         while True:
             chunk = next(gen)
-            if line_ending is None:
-                _write(chunk)
-                continue
-            combined = leftover + chunk
-            # Hold a trailing \r — it may be the leading half of a \r\n
-            # split across chunks.
-            if combined.endswith(b"\r"):
-                leftover = b"\r"
-                combined = combined[:-1]
+            if line_ending is not None:
+                chunk, leftover = _apply_line_ending(chunk, leftover, line_ending)
+            if return_string:
+                buffer.write(chunk.decode("utf-8", errors="replace"))
             else:
-                leftover = b""
-            _write(_transform(combined))
+                output_file.write(chunk)
     except StopIteration as e:
         verification = e.value or (0, 0)
 
+    # Flush any held-back \r from the final chunk.
     if leftover:
-        # Standalone trailing \r — neither replace() touches it; pass through.
-        _write(leftover)
+        if return_string:
+            buffer.write(leftover.decode("utf-8", errors="replace"))
+        else:
+            output_file.write(leftover)
 
     return (buffer.getvalue() if return_string else None), verification
 

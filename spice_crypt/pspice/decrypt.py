@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 _PAD_SENTINEL = b" $jbs$"
-_TAIL_CONTINUES = b"$+"
+_TAIL_MARKER = b"$+"
 
 
 def _make_cipher(mode: int, short_key: bytes):
@@ -69,7 +69,7 @@ def _extract_plaintext(block: bytes) -> tuple[bytes, bool]:
     idx = content.find(_PAD_SENTINEL)
     if idx >= 0:
         content = content[:idx]
-    return content.rstrip(b"\x00"), block[62:64] == _TAIL_CONTINUES
+    return content.rstrip(b"\x00"), block[62:64] == _TAIL_MARKER
 
 
 def _emit_lines(buf: bytes):
@@ -158,7 +158,6 @@ class PSpiceFileParser:
                 # Flush any pending continuation line(s)
                 yield from _emit_lines(continuation)
                 continuation = b""
-                prev_continues = False
                 in_encrypted_block = False
                 cipher = None
                 continue
@@ -186,27 +185,17 @@ class PSpiceFileParser:
 
             # Skip the encrypted header (first block after marker).  The
             # header's own tail bytes are irrelevant — a fresh logical line
-            # starts with the next block.
+            # starts with the next block.  prev_continues was set to False
+            # when the $CDNENCSTART marker was processed, so no reset here.
             if is_header:
                 is_header = False
-                prev_continues = False
                 continue
 
             content, continues_next = _extract_plaintext(plaintext_block)
 
-            # Continuation handling.  Two encoder mechanisms coexist and are
-            # mutually exclusive in practice:
-            #   1. Previous block flagged ``$+`` at bytes 62-63 (byte-limit
-            #      mid-content split): this block's payload is appended to
-            #      the accumulating logical-line buffer verbatim.
-            #   2. This block's payload starts with ``+`` (standard SPICE
-            #      continuation marker): the ``+`` is part of the source
-            #      syntax and must be preserved in the output, but we still
-            #      accumulate into the same buffer so the embedded ``\r``
-            #      between source lines is retained for ``_emit_lines`` to
-            #      split on.
-            # In both cases the per-line split happens later in
-            # ``_emit_lines`` via the embedded ``\r`` from source CRLFs.
+            # Accumulate continuations into the current logical-line buffer;
+            # _emit_lines splits on embedded \r at flush time.  See
+            # SPECIFICATIONS/pspice.md §2.4 for the two continuation styles.
             if prev_continues or content.startswith(b"+"):
                 continuation += content
             else:
