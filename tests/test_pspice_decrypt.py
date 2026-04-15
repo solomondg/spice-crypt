@@ -209,9 +209,12 @@ class TestContinuationAndCRLF:
     def test_roundtrip_reconstructs_source_lines(self, tmp_path):
         lib = self._build_lib(tmp_path)
         content, _ = decrypt_stream(str(lib))
+        # The leading ``+`` is standard SPICE continuation syntax and must
+        # be preserved in the decoded output (stripping it would yield
+        # unparseable SPICE for downstream simulators).
         expected = (
             ".SUBCKT X_LONG NODE_A NODE_B NODE_C NODE_D NODE_E NODE_F NODE_G\n"
-            "  PARAMS: X=1\n"
+            "+  PARAMS: X=1\n"
             "R1 1 2 1k\n"
             ".ends X_LONG\n"
         )
@@ -243,7 +246,7 @@ class TestContinuationAndCRLF:
         data = out.read_bytes()
         # Encrypted-body lines (and the preamble) all use CRLF.
         assert b".SUBCKT X_LONG NODE_A NODE_B NODE_C NODE_D NODE_E NODE_F NODE_G\r\n" in data
-        assert b"  PARAMS: X=1\r\n" in data
+        assert b"+  PARAMS: X=1\r\n" in data
         # No bare LFs, no bare CRs (every \n is paired, every \r is paired).
         assert data.count(b"\n") == data.count(b"\r\n")
         assert data.count(b"\r") == data.count(b"\r\n")

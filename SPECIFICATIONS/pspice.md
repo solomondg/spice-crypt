@@ -117,7 +117,7 @@ PSpice source lines longer than 62 characters are split across multiple blocks. 
 
 **Tail-marker continuation (byte-limit split).**  When the encoder fills all 62 payload bytes of a block with content from a single source line, it writes `0x24 0x2B` (`$+`) at bytes 62–63 of that block.  The next block's payload (bytes 0–61) begins **mid-content** with no leading marker and is appended to the current logical line verbatim.  Chains of three or more blocks are produced by writing `$+` at the tail of every non-terminal block.
 
-**Leading-`+` continuation (indented-source-line).**  When a source line begins with a `+` (explicit SPICE continuation) or leading whitespace (implicit continuation), the encoder produces a block whose byte 0 is `+` (ASCII 0x2B).  The decoder appends the block's content — with the leading `+` stripped — to the current logical line.
+**Leading-`+` continuation (SPICE-syntax continuation line).**  When a source line begins with the standard SPICE continuation marker `+` (ASCII 0x2B), the encoder stores the `+` verbatim at byte 0 of the encoded block.  The block represents a new source line (a continuation of the previous logical statement) and the `+` **must be preserved** in the decoded output — stripping it produces unparseable SPICE for downstream simulators, since `+` is syntactically required to denote the continuation.  A decoder may still use the leading `+` as a *signal* that this block belongs to the previous logical statement for buffering purposes, but the character itself is part of the plaintext and round-trips to output.
 
 The two mechanisms are mutually exclusive in practice: a block whose tail is `$+` is always followed by a block that does **not** begin with `+`, and vice versa.  Decoders must implement both.
 

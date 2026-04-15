@@ -196,15 +196,19 @@ class PSpiceFileParser:
 
             # Continuation handling.  Two encoder mechanisms coexist and are
             # mutually exclusive in practice:
-            #   1. Previous block flagged ``$+`` at bytes 62-63: this block's
-            #      payload continues the logical line verbatim (no ``+`` to
-            #      strip).
-            #   2. This block's payload starts with ``+``: SPICE-style
-            #      continuation of an indented source line.
-            if prev_continues:
+            #   1. Previous block flagged ``$+`` at bytes 62-63 (byte-limit
+            #      mid-content split): this block's payload is appended to
+            #      the accumulating logical-line buffer verbatim.
+            #   2. This block's payload starts with ``+`` (standard SPICE
+            #      continuation marker): the ``+`` is part of the source
+            #      syntax and must be preserved in the output, but we still
+            #      accumulate into the same buffer so the embedded ``\r``
+            #      between source lines is retained for ``_emit_lines`` to
+            #      split on.
+            # In both cases the per-line split happens later in
+            # ``_emit_lines`` via the embedded ``\r`` from source CRLFs.
+            if prev_continues or content.startswith(b"+"):
                 continuation += content
-            elif content.startswith(b"+"):
-                continuation += content[1:]
             else:
                 yield from _emit_lines(continuation)
                 continuation = content
