@@ -109,7 +109,18 @@ When the plaintext content for a block is shorter than 62 bytes, the following p
 2. The remaining bytes (up to position 61) are filled with pseudo-random ASCII characters.  Each fill byte is generated as `(rand() & 0x0F) + base`, where `base` cycles through the values 65 (`A`) through 70 (`F`) in groups of six.
 3. Byte 62 is set to null (`0x00`), making the padded content null-terminated within the 63-byte region (bytes 0–62).  However, this null byte is then overwritten by the encoder when it writes bytes 62–63.
 
-During decryption, the padding sentinel ` $jbs$` is searched within bytes 0–61 of each decrypted block.  If found, only the content before the sentinel is used.  Any remaining trailing null bytes are also stripped.
+During decryption, the padding sentinel ` $jbs$` is searched within each decrypted block.  If found, only the content before the sentinel is used.  Any remaining trailing null bytes are also stripped.
+
+**Sentinel-overlap edge cases.**  For most content lengths the sentinel fits entirely within the 62-byte payload region.  For content lengths 57–60 the sentinel extends into or past the tail-marker region (bytes 62–63) and is observed truncated in the decrypted output:
+
+| content_len | sentinel span | what survives in the block |
+|-------------|---------------|-----------------------------|
+| 57 | 57–62 | full ` $jbs$` intact (byte 62 = `$` is also the first byte of the tail marker) |
+| 58 | 58–63 | bytes 58–62 = ` $jbs`; byte 63 overwritten with `\0` |
+| 59 | 59–63 (would need 64) | bytes 59–62 = ` $jb`; byte 63 = `\0` |
+| 60 | 60–63 (would need 65) | bytes 60–62 = ` $j`; byte 63 = `\0` |
+
+Decoders must look for the full sentinel anywhere in bytes 0–63, and additionally check for these truncated prefixes (gated by byte 63 = `\0`) so the partial sentinel is not left in the output.
 
 ### 2.4 Line Continuation
 

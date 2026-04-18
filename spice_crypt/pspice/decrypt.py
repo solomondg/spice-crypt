@@ -60,16 +60,31 @@ def _decrypt_64_block(cipher, mode: int, data: bytes) -> bytes:
 def _extract_plaintext(block: bytes) -> tuple[bytes, bool]:
     """Extract plaintext content and the continuation flag from a 64-byte block.
 
-    Content occupies bytes 0-61, truncated at the `` $jbs$`` padding sentinel
-    if present.  Bytes 62-63 are the continuation flag: ``b"$+"`` means the
-    next block's payload is a verbatim continuation of this one (no leading
-    ``+``); any other value means this block terminates its logical line.
+    Content is truncated at the `` $jbs$`` padding sentinel if present.  For
+    most content lengths the sentinel fits within the block's payload region
+    (bytes 0-61), but for content lengths 57-60 it extends into or past the
+    tail-marker region (bytes 62-63); the encoder writes ``\\0`` at byte 63
+    in those cases, leaving only a prefix of the sentinel visible.  We
+    handle all four edge cases.  See ``SPECIFICATIONS/pspice.md`` §2.3.
+
+    Bytes 62-63 are the continuation flag: ``b"$+"`` means the next block's
+    payload is a verbatim continuation of this one (no leading ``+``); any
+    other value means this block terminates its logical line.
     """
-    content = block[:62]
-    idx = content.find(_PAD_SENTINEL)
-    if idx >= 0:
-        content = content[:idx]
-    return content.rstrip(b"\x00"), block[62:64] == _TAIL_MARKER
+    continues_next = block[62:64] == _TAIL_MARKER
+    # Search the full block — content_len=57 puts the sentinel at 57-62,
+    # past the usual [0:62] slice (find on the whole block picks it up).
+    idx = block.find(_PAD_SENTINEL)
+    if idx < 0 and block[63:64] == b"\x00":
+        # content_len ∈ {58, 59, 60}: sentinel starts in the tail region
+        # and its final byte(s) are clobbered by the encoder's null byte at
+        # position 63.  Match the longest surviving prefix.
+        for start in (58, 59, 60):
+            if block[start:63] == _PAD_SENTINEL[: 63 - start]:
+                idx = start
+                break
+    content = block[:idx] if idx >= 0 else block[:62]
+    return content.rstrip(b"\x00"), continues_next
 
 
 def _emit_lines(buf: bytes):

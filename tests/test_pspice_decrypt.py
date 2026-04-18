@@ -240,6 +240,47 @@ class TestContinuationAndCRLF:
         assert content == b"hello"
         assert continues is False
 
+    def test_extract_plaintext_handles_sentinel_overlap(self):
+        """Sentinel can extend into or past the tail-marker region (bytes 62-63)
+        for content lengths 57-60.  See SPECIFICATIONS/pspice.md §2.3."""
+        from spice_crypt.pspice.decrypt import _extract_plaintext
+
+        # content_len=57: sentinel at 57-62 (intact), byte 63 = tail marker's
+        # second byte; find() on the full block picks it up.
+        blk57 = b"A" * 57 + b" $jbs$" + b"\x00"
+        assert len(blk57) == 64
+        content, _ = _extract_plaintext(blk57)
+        assert content == b"A" * 57
+
+        # content_len=58: sentinel at 58-63, byte 63 overwritten with \0.
+        # Only ` $jbs` (5 bytes) survives at 58-62.
+        blk58 = b"B" * 58 + b" $jbs" + b"\x00"
+        assert len(blk58) == 64
+        content, _ = _extract_plaintext(blk58)
+        assert content == b"B" * 58
+
+        # content_len=59: bytes 59-62 = ` $jb`, byte 63 = \0.
+        blk59 = b"C" * 59 + b" $jb" + b"\x00"
+        assert len(blk59) == 64
+        content, _ = _extract_plaintext(blk59)
+        assert content == b"C" * 59
+
+        # content_len=60: bytes 60-62 = ` $j`, byte 63 = \0.
+        blk60 = b"D" * 60 + b" $j" + b"\x00"
+        assert len(blk60) == 64
+        content, _ = _extract_plaintext(blk60)
+        assert content == b"D" * 60
+
+        # Sanity: a continuation block (byte 63 = '+') ending in a ` $jbs`-looking
+        # suffix must NOT be misinterpreted as a truncated sentinel.
+        blk_cont = b"E" * 57 + b" $jbs" + b"$+"
+        assert len(blk_cont) == 64
+        content, continues = _extract_plaintext(blk_cont)
+        # Full sentinel is intact at 57-62 (byte 62 = '$' from tail marker),
+        # so it's found and stripped.
+        assert content == b"E" * 57
+        assert continues is True
+
     def test_line_ending_crlf(self, tmp_path):
         """--line-ending crlf (via line_ending=b'\\r\\n') produces CRLF output."""
         lib = self._build_lib(tmp_path)
